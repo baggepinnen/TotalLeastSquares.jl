@@ -2,6 +2,14 @@
 
 Solve (weighted) total least-squares problems
 
+Two functions are exported:
+
+- `x = tls(A,y)`
+  Solves the standard TLS problem using the SVD method
+- `x = wtls(A,y,Qaa,Qay,Qyy,iters=10)`
+  Solves the weighted TLS problem using algorithm 1 from (Fang, 2013)
+  The Q-matrices are the covariance matrices of the noise terms in `vec(A)` and `y` respectively.
+
 ## Example
 ```julia
 using TotalLeastSquares, FillArrays
@@ -10,20 +18,20 @@ A   = randn(50,3)
 σa  = 1
 σy  = 0.01
 An  = A + σa*randn(size(A))
-b   = A*x
-bn  = b + σy*randn(size(b))
+y   = A*x
+yn  = y + σy*randn(size(y))
 Qaa = σa^2*Eye(prod(size(A)))
-Qay = 0Eye(prod(size(A)),length(b))
-Qyy = σy^2*Eye(prod(size(b)))
+Qay = 0Eye(prod(size(A)),length(y))
+Qyy = σy^2*Eye(prod(size(y)))
 
 
-x̂ = An\bn
+x̂ = An\yn
 @printf "Least squares error: %25.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
 
-x̂ = tls(An,bn)
+x̂ = tls(An,yn)
 @printf "Total Least squares error: %19.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
 
-x̂ = wtls(An,bn,Qaa,Qay,Qyy,iters=10)
+x̂ = wtls(An,yn,Qaa,Qay,Qyy,iters=10)
 @printf "Weighted Total Least squares error: %10.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
 println("----------------------------")
 ```
