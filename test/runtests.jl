@@ -12,15 +12,21 @@ Qay = 0Eye(prod(size(A)),length(y))
 Qyy = σy^2*Eye(prod(size(y)))
 
 
+@testset "TotalLeastSquares" begin
 x̂ = An\yn
 @printf "Least squares error: %25.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
+@test norm(x-x̂) < 1
 
 x̂ = wls(An,yn,Qyy)
 @printf "Weigthed Least squares error: %16.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
+@test norm(x-x̂) < 1
 
 x̂ = tls(An,yn)
 @printf "Total Least squares error: %19.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
+@test norm(x-x̂) < 1
 
 x̂ = wtls(An,yn,Qaa,Qay,Qyy,iters=10)
 @printf "Weighted Total Least squares error: %10.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
 println("----------------------------")
+@test norm(x-x̂) < 1
+end
