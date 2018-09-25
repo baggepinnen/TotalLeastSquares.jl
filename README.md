@@ -11,10 +11,12 @@ These functions are exported:
   The Q-matrices are the covariance matrices of the noise terms in `vec(A)` and `y` respectively.
 - `Qaa,Qay,Qyy = rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})`
   Takes row-wise covariance matrices `QAy[i]` and returns the full (sparse) covariance matrices. `rowQ = [cov([A[i,:] y[i]]) for i = 1:length(y)]`
+- `x = wls(A,y,Qyy)` Solves the weighted standard LS problem. `Qyy` is the covariance matrix of the residuals with side length equal to the length of `y`.
 
 ## Example
 ```julia
-using TotalLeastSquares, FillArrays
+using TotalLeastSquares, FillArrays, Random, Printf
+Random.seed!(0)
 x   = randn(3)
 A   = randn(50,3)
 σa  = 1
@@ -30,6 +32,9 @@ Qyy = σy^2*Eye(prod(size(y)))
 x̂ = An\yn
 @printf "Least squares error: %25.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
 
+x̂ = wls(An,yn,Qyy)
+@printf "Weigthed Least squares error: %16.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
+
 x̂ = tls(An,yn)
 @printf "Total Least squares error: %19.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
 
@@ -38,8 +43,9 @@ x̂ = wtls(An,yn,Qaa,Qay,Qyy,iters=10)
 println("----------------------------")
 ```
 ```julia
-Least squares error:                 2.690e-01 -2.019e-01 -2.954e-01, Norm:  4.476e-01
-Total Least squares error:           2.087e-01 -1.420e-01 -2.621e-01, Norm:  3.639e-01
-Weighted Total Least squares error: -9.463e-02 -3.910e-02 -1.762e-01, Norm:  2.038e-01
+Least squares error:                 3.753e-01  2.530e-01 -3.637e-01, Norm:  5.806e-01
+Weigthed Least squares error:        3.753e-01  2.530e-01 -3.637e-01, Norm:  5.806e-01
+Total Least squares error:           2.897e-01  1.062e-01 -2.976e-01, Norm:  4.287e-01
+Weighted Total Least squares error:  1.213e-01 -1.933e-01 -9.527e-02, Norm:  2.473e-01
 ----------------------------
 ```

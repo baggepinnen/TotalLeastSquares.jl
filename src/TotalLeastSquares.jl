@@ -1,6 +1,21 @@
 module TotalLeastSquares
-export tls, wtls
+export tls, wtls, wls, rowcovariance
 using FillArrays, Printf, LinearAlgebra, SparseArrays
+
+"""
+wls(A,y,Σ)
+
+Solves the weigted standard least-squares problem Ax = y + e, e ~ N(0,Σ)
+# Arguments
+- `A ∈ R(n,u)` Design matrix
+- `y ∈ R(n)` RHS
+- `Σ ∈ R(n,n)` Covariance matrix of the residuals (can be sparse or already factorized).
+"""
+function wls(A,y,Σ)
+    (A'*(Σ\A))\A'*(Σ\y)
+end
+
+wls(A,y,Σ::Union{Matrix, SparseMatrixCSC}) = wls(A,y,factorize(Hermitian(Σ)))
 
 """
 tls(A,y)
@@ -46,7 +61,7 @@ function wtls(A,y,Qaa,Qay,Qyy; iters = 10)
     n,u    = size(A)
     eyef   = issparse(Qaa) ? speye : Eye
     Iₙ,Iᵤ  = eyef(n,n),eyef(u,u)
-    x      = (A'*(Qyy\A))\A'*(Qyy\y) # Initialize with weigted LS slution
+    x      = wls(A,y,Qyy) # Initialize with weigted LS slution
     QₐₐQₐy = [Qaa Qay]
     QΠ     = [Qaa Qay; [Qay' Qyy]]
     for i = 1:iters
