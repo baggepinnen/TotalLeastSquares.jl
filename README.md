@@ -2,13 +2,15 @@
 
 Solve (weighted) total least-squares problems
 
-Two functions are exported:
+These functions are exported:
 
 - `x = tls(A,y)`
   Solves the standard TLS problem using the SVD method
 - `x = wtls(A,y,Qaa,Qay,Qyy,iters=10)`
   Solves the weighted TLS problem using algorithm 1 from (Fang, 2013)
   The Q-matrices are the covariance matrices of the noise terms in `vec(A)` and `y` respectively.
+- `Qaa,Qay,Qyy = rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})`
+  Takes row-wise covariance matrices `QAy[i]` and returns the full (sparse) covariance matrices. `rowQ = [cov([A[i,:] y[i]]) for i = 1:length(y)]`
 
 ## Example
 ```julia

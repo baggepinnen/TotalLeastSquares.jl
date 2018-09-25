@@ -1,9 +1,9 @@
 module TotalLeastSquares
 export tls, wtls
-using FillArrays, Printf, LinearAlgebra
+using FillArrays, Printf, LinearAlgebra, SparseArrays
 
 """
-    tls(A,y)
+tls(A,y)
 
 Solves the total least-squares problem Ax=y using the SVD method
 # Arguments
@@ -40,22 +40,52 @@ https://link.springer.com/article/10.1007/s00190-013-0643-2
 - `Qay` Covariance between A and y
 
 # Keyword Arguments
-- ` iters = 10` Maximum number of iterations
+- ` iters = 10` Number of iterations
 """
 function wtls(A,y,Qaa,Qay,Qyy; iters = 10)
-    n,u = size(A)
-    Iₙ,Iᵤ = Eye(n,n),Eye(u,u)
-    x   = (A'*(Qyy\A))\A'*(Qyy\y) # Initialize with LS slution
+    n,u    = size(A)
+    eyef   = issparse(Qaa) ? speye : Eye
+    Iₙ,Iᵤ  = eyef(n,n),eyef(u,u)
+    x      = (A'*(Qyy\A))\A'*(Qyy\y) # Initialize with weigted LS slution
     QₐₐQₐy = [Qaa Qay]
-    QΠ = [Qaa Qay; [Qay' Qyy]]
+    QΠ     = [Qaa Qay; [Qay' Qyy]]
     for i = 1:iters
-        B = [(x' ⊗ Iₙ) -Iₙ]
+        B    = [(x' ⊗ Iₙ) -Iₙ]
         BQBᵀ = factorize(Symmetric(B*QΠ*B'))
-        λ = BQBᵀ\(y-A*x)
-        v = QₐₐQₐy*B'λ
-        x = (A'*(BQBᵀ\A))\((Iᵤ ⊗ λ')*v + A'*(BQBᵀ\y))
+        λ    = BQBᵀ\(y-A*x)
+        v    = QₐₐQₐy*B'λ
+        x    = (A'*(BQBᵀ\A))\((Iᵤ ⊗ λ')*v + A'*(BQBᵀ\y))
     end
     x
 end
+
+"""
+Qaa,Qay,Qyy = rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})
+
+Takes row-wise covariance matrices `QAy[i]` and returns the full (sparse) covariance matrices. `rowQ = [cov([A[i,:] y[i]]) for i = 1:length(y)]`
+"""
+function rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})
+    n = length(rowQ)
+    u = size(rowQ[1],1)-1
+    Qaa,Qay,Qyy = spzeros(n*u,n*u), spzeros(n*u,n), Diagonal(spzeros(n,n))
+    for (i,Q) = enumerate(rowQ)
+        for col = 1:u
+            for row = 1:u
+                aind1 = i + (row-1)*n
+                aind2 = i + (col-1)*n
+                Qaa[aind1,aind2] = Q[row,col]
+            end
+        end
+        yind = i
+        for row = 1:u
+            aind = i + (row-1)*n
+            Qay[aind,yind] = Q[row,end]
+        end
+        Qyy[yind,yind] = Q[end,end]
+    end
+    Qaa,Qay,Qyy
+end
+
+
 
 end # module
