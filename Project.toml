@@ -1,6 +1,6 @@
 name = "TotalLeastSquares"
 uuid = "4d86fc1a-bdb3-11e8-0c66-91cf18e9d32b"
-authors = ["Fredrik Bagge Carlson <cont-frb@ulund.org>"]
+authors = ["Fredrik Bagge Carlson <baggepinnen@gmail.com>"]
 version = "0.1.0"
 
 [deps]
