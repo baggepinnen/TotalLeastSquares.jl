@@ -1,6 +1,6 @@
 module TotalLeastSquares
 export tls, wtls, wls, rowcovariance
-using FillArrays, Printf, LinearAlgebra, SparseArrays
+using FillArrays, Printf, LinearAlgebra, SparseArrays, SuiteSparse
 
 """
 wls(A,y,Σ)
@@ -58,9 +58,9 @@ https://link.springer.com/article/10.1007/s00190-013-0643-2
 - ` iters = 10` Number of iterations
 """
 function wtls(A,y,Qaa,Qay,Qyy; iters = 10)
-    n,u    = size(A)
-    eyef   = issparse(Qaa) ? speye : Eye
-    Iₙ,Iᵤ  = eyef(n,n),eyef(u,u)
+    @show n,u    = size(A)
+    eyef   = issparse(Qaa) ? n->SparseMatrixCSC(I,n,n) : Eye
+    Iₙ,Iᵤ  = eyef(n),eyef(u)
     x      = wls(A,y,Qyy) # Initialize with weigted LS slution
     QₐₐQₐy = [Qaa Qay]
     QΠ     = [Qaa Qay; [Qay' Qyy]]
