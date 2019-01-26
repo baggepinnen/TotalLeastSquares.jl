@@ -1,6 +1,6 @@
 module TotalLeastSquares
 export tls, wtls, wls, rowcovariance
-using FillArrays, Printf, LinearAlgebra, SparseArrays, SuiteSparse
+using FillArrays, Printf, LinearAlgebra, SparseArrays
 
 """
 wls(A,y,Σ)
