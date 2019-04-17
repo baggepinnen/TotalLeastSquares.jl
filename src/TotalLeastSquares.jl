@@ -58,8 +58,8 @@ https://link.springer.com/article/10.1007/s00190-013-0643-2
 - ` iters = 10` Number of iterations
 """
 function wtls(A,y,Qaa,Qay,Qyy; iters = 10)
-    @show n,u    = size(A)
-    eyef   = issparse(Qaa) ? n->SparseMatrixCSC(I,n,n) : Eye
+    n,u    = size(A)
+    eyef   = issparse(Qaa) ? n->SparseMatrixCSC(1I,n,n) : Eye
     Iₙ,Iᵤ  = eyef(n),eyef(u)
     x      = wls(A,y,Qyy) # Initialize with weigted LS slution
     QₐₐQₐy = [Qaa Qay]
