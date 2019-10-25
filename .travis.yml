@@ -5,11 +5,11 @@ os:
   - osx
 julia:
   - 1.0
-  - 1.1
   - nightly
 matrix:
   allow_failures:
     - julia: nightly
+  fast_finish: true
 notifications:
   email: false
 env:
@@ -20,7 +20,5 @@ env:
   # - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
   # - julia -e 'Pkg.clone(pwd()); Pkg.build("TotalLeastSquares"); Pkg.test("TotalLeastSquares"; coverage=true)'
 after_success:
-  # push coverage results to Coveralls
-  - julia -e 'import Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
   # push coverage results to Codecov
   - julia -e 'import Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
