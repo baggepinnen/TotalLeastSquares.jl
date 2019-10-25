@@ -13,20 +13,27 @@ Qyy = σy^2*Eye(prod(size(y)))
 
 
 @testset "TotalLeastSquares" begin
-x̂ = An\yn
-@printf "Least squares error: %25.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
-@test norm(x-x̂) < 1
+    x̂ = An\yn
+    @printf "Least squares error: %25.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
+    @test norm(x-x̂) < 1
 
-x̂ = wls(An,yn,Qyy)
-@printf "Weigthed Least squares error: %16.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
-@test norm(x-x̂) < 1
+    x̂ = wls(An,yn,Qyy)
+    @printf "Weigthed Least squares error: %16.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
+    @test norm(x-x̂) < 1
 
-x̂ = tls(An,yn)
-@printf "Total Least squares error: %19.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
-@test norm(x-x̂) < 1
+    x̂ = tls(An,yn)
+    @printf "Total Least squares error: %19.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
+    @test norm(x-x̂) < 1
 
-x̂ = wtls(An,yn,Qaa,Qay,Qyy,iters=10)
-@printf "Weighted Total Least squares error: %10.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
-println("----------------------------")
-@test norm(x-x̂) < 1
+    x̂ = wtls(An,yn,Qaa,Qay,Qyy,iters=10)
+    @printf "Weighted Total Least squares error: %10.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
+    println("----------------------------")
+    @test norm(x-x̂) < 1
+
+    @test tls(An,yn) ≈ tls!([An yn], size(An,2))
+
+    rowC = rowcovariance([[σa^2*I(3) zeros(3); zeros(1,3) σy^2] for _ in 1:50])
+    @test rowC[1] ≈ Qaa
+    @test rowC[2] ≈ Qay
+    @test rowC[3] ≈ Qyy
 end

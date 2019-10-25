@@ -1,9 +1,9 @@
 module TotalLeastSquares
-export tls, wtls, wls, rowcovariance
+export tls, tls!, wtls, wls, rowcovariance
 using FillArrays, Printf, LinearAlgebra, SparseArrays
 
 """
-wls(A,y,Σ)
+    wls(A,y,Σ)
 
 Solves the weigted standard least-squares problem Ax = y + e, e ~ N(0,Σ)
 # Arguments
@@ -18,21 +18,34 @@ end
 wls(A,y,Σ::Union{Matrix, SparseMatrixCSC}) = wls(A,y,factorize(Hermitian(Σ)))
 
 """
-tls(A,y)
+    tls(A,y)
 
 Solves the total least-squares problem Ax=y using the SVD method
 # Arguments
 - `A` Design matrix
 - `y` RHS
 """
-function tls(A,y)
+function tls(A::AbstractArray,y::AbstractArray)
     AA  = [A y]
-    s   = svd(AA)
-    m,n = length(y),size(A,2)
+    s   = svd!(AA)
+    n   = size(A,2)
     V21 = s.V[1:n,n+1:end]
     V22 = s.V[n+1:end,n+1:end]
     x   = -V21/V22
 end
+
+"""
+    tls!(Ay::AbstractArray, n::Integer)
+
+Inplace version of `tls`. `Ay` is `[A y]` and `n` is the number of columns in `A`
+"""
+function tls!(Ay::AbstractArray, n::Integer)
+    s   = svd!(Ay)
+    V21 = s.V[1:n,n+1:end]
+    V22 = s.V[n+1:end,n+1:end]
+    x   = -V21/V22
+end
+
 
 a ⊗ b = kron(a,b)
 
@@ -75,7 +88,7 @@ function wtls(A,y,Qaa,Qay,Qyy; iters = 10)
 end
 
 """
-Qaa,Qay,Qyy = rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})
+    Qaa,Qay,Qyy = rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})
 
 Takes row-wise covariance matrices `QAy[i]` and returns the full (sparse) covariance matrices. `rowQ = [cov([A[i,:] y[i]]) for i = 1:length(y)]`
 """
