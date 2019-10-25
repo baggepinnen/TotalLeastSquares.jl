@@ -32,7 +32,7 @@ Qyy = σy^2*Eye(prod(size(y)))
 
     @test tls(An,yn) ≈ tls!([An yn], size(An,2))
 
-    rowC = rowcovariance([[σa^2*I(3) zeros(3); zeros(1,3) σy^2] for _ in 1:50])
+    rowC = rowcovariance([[σa^2*Eye(3) zeros(3); zeros(1,3) σy^2] for _ in 1:50])
     @test rowC[1] ≈ Qaa
     @test rowC[2] ≈ Qay
     @test rowC[3] ≈ Qyy
