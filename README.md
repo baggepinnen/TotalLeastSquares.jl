@@ -9,7 +9,7 @@ Solve (weighted) total least-squares problems
 These functions are exported:
 
 - `x = tls(A,y)`
-  Solves the standard TLS problem using the SVD method
+  Solves the standard TLS problem using the SVD method. An inplace version `tls!(Ay, n)` also exists, for this you need to supply `Ay = [A y]` and the width of `A`, `n = size(A,2)`.
 - `x = wtls(A,y,Qaa,Qay,Qyy,iters=10)`
   Solves the weighted TLS problem using algorithm 1 from (Fang, 2013)
   The Q-matrices are the covariance matrices of the noise terms in `vec(A)` and `y` respectively.
