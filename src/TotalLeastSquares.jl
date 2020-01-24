@@ -27,7 +27,7 @@ Solves the total least-squares problem Ax=y using the SVD method
 """
 function tls(A::AbstractArray,y::AbstractArray)
     AA  = [A y]
-    s   = svd!(AA)
+    s   = svd(AA)
     n   = size(A,2)
     V21 = s.V[1:n,n+1:end]
     V22 = s.V[n+1:end,n+1:end]

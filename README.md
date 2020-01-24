@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/baggepinnen/TotalLeastSquares.jl.svg?branch=master)](https://travis-ci.org/baggepinnen/TotalLeastSquares.jl)
+[![PkgEval](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/T/TotalLeastSquares.svg)](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html)
 [![codecov](https://codecov.io/gh/baggepinnen/TotalLeastSquares.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/baggepinnen/TotalLeastSquares.jl)
 
 
