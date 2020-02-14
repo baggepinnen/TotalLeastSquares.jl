@@ -58,7 +58,7 @@ Weighted Total Least squares error:  1.213e-01 -1.933e-01 -9.527e-02, Norm:  2.4
 ```
 
 ## Robust TLS analysis
-The code for this analysis is in total_vs_robust_demo.jl
+The code for this analysis is [here](https://github.com/baggepinnen/TotalLeastSquares.jl/blob/master/total_vs_robust_demo.jl).
 
 We generate random data on the form `Ax=y` where both `A` and `y` are corrupted with sparse noise, the entries in `A` are Gaussian random variables with unit variance and `size(A) = (500,5)`. The plots below show the norm of the error in the estimated `x` as functions of the noise variance and the noise sparsity.
 
