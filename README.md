@@ -17,6 +17,8 @@ These functions are exported:
 - `Qaa,Qay,Qyy = rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})`
   Takes row-wise covariance matrices `QAy[i]` and returns the full (sparse) covariance matrices. `rowQ = [cov([A[i,:] y[i]]) for i = 1:length(y)]`
 - `x = wls(A,y,Qyy)` Solves the weighted standard LS problem. `Qyy` is the covariance matrix of the residuals with side length equal to the length of `y`.
+- `x = rtls(A,y)` Solves a robust TLS problem. Both `A` and `y` are assumed to be corrupted with high magnitude, but sparse, noise. See analysis below.
+- `Â, Ê = rpca(D; kwargs...)` robust matrix recovery using robust PCA. Solves `minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E`
 
 ## Example
 ```julia
@@ -54,6 +56,17 @@ Total Least squares error:           2.897e-01  1.062e-01 -2.976e-01, Norm:  4.2
 Weighted Total Least squares error:  1.213e-01 -1.933e-01 -9.527e-02, Norm:  2.473e-01
 ----------------------------
 ```
+
+## Robust TLS analysis
+The code for this analysis is in total_vs_robust_demo.jl
+
+We generate random data on the form `Ax=y` where both `A` and `y` are corrupted with sparse noise, the entries in `A` are Gaussian random variables with unit variance and `size(A) = (500,5)`. The plots below show the norm of the error in the estimated `x` as functions of the noise variance and the noise sparsity.
+
+![window](figs/e_vs_n.svg)
+![window](figs/e_vs_s_5.svg)
+![window](figs/e_vs_s_50.svg)
+
+The results indicate that the robust method is to be preferred when the noise is large but sparse.
 
 # Notes
 This package was developed for the thesis  

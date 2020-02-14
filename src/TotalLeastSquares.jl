@@ -1,5 +1,6 @@
 module TotalLeastSquares
-export tls, tls!, wtls, wls, rowcovariance
+export tls, tls!, wtls, wls, rtls, rowcovariance
+export rpca
 using FillArrays, Printf, LinearAlgebra, SparseArrays
 
 """
@@ -114,6 +115,24 @@ function rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})
     Qaa,Qay,Qyy
 end
 
+include("robustPCA.jl")
 
+
+"""
+    rtls(A,y; nukeA=false, kwargs...)
+
+Solves a robust total least-squares problem Ax=y using the robust PCA method of "The Augmented Lagrange Multiplier Method for Exact Recovery of Corrupted Low-Rank Matrices", https://people.eecs.berkeley.edu/~yima/psfile/Lin09-MP.pdf
+
+# Arguments
+- `A` Design matrix
+- `y` RHS
+- `kwargs` are passed to [`rpca`](@ref), see the docstring for [`rpca`](@ref) for more help.
+"""
+function rtls(A::AbstractArray,y::AbstractArray; kwargs...)
+    AA  = [A y]
+    Ah,Eh = rpca(AA; nukeA=false, kwargs...)
+    tls!(Ah,size(A,2))
+
+end
 
 end # module
