@@ -76,7 +76,6 @@ Random.seed!(0)
 
     end
 
-
 @testset "rtls" begin
     @info "Testing rtls"
     passes = map(1:1000) do _
@@ -108,6 +107,94 @@ Random.seed!(0)
         norm(x-x̂r) < norm(x-x̂t)
     end
     @test mean(passes) > 0.8
+
+end
+
+@testset "soft toeplitz" begin
+    function istoeplitz(A)
+        for i = size(A,2)-1:-1:(-size(A,1)+1)
+            di = diagind(A,i)
+            all(==(A[di[1]]), A[di]) || return false
+        end
+        true
+    end
+    @info "Testing soft toeplitz"
+    A = [1 2 3 4;
+         5 1 2 3;
+         6 5 1 2;
+         7 6 5 1;
+         8 7 6 5]
+    @test istoeplitz(A)
+     An = A + 0.1randn(size(A))
+     @test !istoeplitz(An)
+     Anc = copy(An)
+     TotalLeastSquares.soft_toeplitz!(An, 0.1)
+     @test sum(abs2,An-A) < sum(abs2,Anc-A)
+
+     An = -A + 0.1randn(size(A))
+     Anc = copy(An)
+     TotalLeastSquares.soft_toeplitz!(An, 0.1)
+     @test sum(abs2,An+A) < sum(abs2,Anc+A)
+
+
+    An = Float64.(A)
+    An[diagind(A,0)] .+= 0.1
+    An[diagind(A,-1)] .-= 0.1
+    Anc = copy(An)
+    A1,E1 = rpca(An, verbose=true, nukeA=false)
+    A2,E2 = rpca(An, verbose=true, nukeA=false, toeplitz=true)
+    @test sum(abs2,A2-A) < sum(abs2,A1-A)
+
+    passes = map(1:500) do _
+        y = randn(100)
+        A = zeros(95,5)
+        for i in 0:size(A,1)-1
+            di = diagind(A,-i)
+            for di in di
+                A[di] = y[i+2]
+            end
+        end
+        for i in 1:size(A,2)-1
+            di = diagind(A,i)
+            for di in di
+                A[di] = y[5-i+1]
+            end
+        end
+        @test istoeplitz(A)
+        A1,E1 = rpca(A, verbose=false, nukeA=false)
+        A2,E2 = rpca(A, verbose=false, nukeA=false, toeplitz=true)
+        @test istoeplitz(A2)
+        @test istoeplitz(E2)
+        mean(abs2,A2-A) < mean(abs2,A1-A)
+    end
+    @show mean(passes)
+    @test mean(passes) > 0.78
+
+
+    passes = map(1:10) do _
+        y = randn(1000)
+        A = zeros(950,50)
+        for i in 0:size(A,1)-1
+            di = diagind(A,-i)
+            for di in di
+                A[di] = y[i+2]
+            end
+        end
+        for i in 1:size(A,2)-1
+            di = diagind(A,i)
+            for di in di
+                A[di] = y[50-i+1]
+            end
+        end
+        @test istoeplitz(A)
+        A1,E1 = rpca(A, verbose=false, nukeA=false)
+        A2,E2 = rpca(A, verbose=false, nukeA=false, toeplitz=true)
+        @test istoeplitz(A2)
+        @test istoeplitz(E2)
+        mean(abs2,A2-A) < mean(abs2,A1-A)
+    end
+    @show mean(passes)
+    @test mean(passes) >= 0.5
 
 end
 

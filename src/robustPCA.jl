@@ -1,6 +1,22 @@
+@inline soft_th(x, ϵ) = max(x-ϵ,zero(x)) + min(x+ϵ,zero(x))
+@inline soft_th(x, ϵ, l) = max(x-ϵ,l) + min(x+ϵ,l) - l
 
-
-soft_th(x, ϵ) = max(x-ϵ,zero(x)) + min(x+ϵ,zero(x))
+function soft_toeplitz!(A, ϵ)
+    @inbounds for i in 0:size(A,1)-2
+        di = diagind(A,-i)
+        m = sum(A[j] for j in di)/length(di)
+        for di in di
+            A[di] = soft_th(A[di], ϵ, m)
+        end
+    end
+    @inbounds for i in 1:size(A,2)-2
+        di = diagind(A,i)
+        m = sum(A[j] for j in di)/length(di)
+        for di in di
+            A[di] = soft_th(A[di], ϵ, m)
+        end
+    end
+end
 
 """
     rpca(D::Matrix; λ=1.0 / √(maximum(size(D))), iters=1000, tol=1.0e-7, ρ=1.5, verbose=false, nonnegA=false, nonnegE=false, nukeA=true)
@@ -19,16 +35,18 @@ Ref: "The Augmented Lagrange Multiplier Method for Exact Recovery of Corrupted L
 - `nonnegA`: Hard thresholding on A
 - `nonnegE`: Hard thresholding on E
 - `nukeA`: Activate the nuclear penalty on `A`, if `false`, then `A` is not assumed to be low rank.
+- `toeplitz`: Indicating whether or not `D` (and thus `A` and `E`) are Toeplitz matrices (constant diagonals). If this fact is known, the expected performance of this alogorithm goes up. If the matrix `D` is Hankel (constant antidiagonals) you may reverse the second dimension, i.e., `Dᵣ = D[:,end:-1:1]`. `toeplitz=true` should likely be paired with `nukeA=false`. 
 """
 function rpca(D::AbstractMatrix{T};
-                          λ             = T(1.0/sqrt(maximum(size(D)))),
-                          iters::Int    = 1000,
-                          tol           = sqrt(eps(T)),
-                          ρ             = T(1.5),
-                          verbose::Bool = false,
-                          nonnegA::Bool = false,
-                          nonnegE::Bool = false,
-                          nukeA         = true) where T
+                          λ              = T(1.0/sqrt(maximum(size(D)))),
+                          iters::Int     = 1000,
+                          tol            = sqrt(eps(T)),
+                          ρ              = T(1.5),
+                          verbose::Bool  = false,
+                          nonnegA::Bool  = false,
+                          nonnegE::Bool  = false,
+                          toeplitz::Bool = false,
+                          nukeA          = true) where T
 
     M, N      = size(D)
     d         = min(M,N)
@@ -46,6 +64,9 @@ function rpca(D::AbstractMatrix{T};
 
     for k = 1:iters
         E .= soft_th.(D .- A .+ (1/μ) .* Y, λ/μ)
+        if toeplitz
+            soft_toeplitz!(E, λ/μ)
+        end
         if nonnegE
             E .= max.(E, 0)
         end
@@ -62,6 +83,9 @@ function rpca(D::AbstractMatrix{T};
             A .= U[:,1:svp] * Diagonal(S[1:svp] .- 1/μ) * V[:,1:svp]'
         else
             A .= U[:,1:svp] * Diagonal(S[1:svp]) * V[:,1:svp]'
+        end
+        if toeplitz
+            soft_toeplitz!(A, λ/μ)
         end
         if nonnegA
             A .= max.(A, 0)
