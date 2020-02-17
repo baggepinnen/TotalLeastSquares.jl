@@ -1,4 +1,4 @@
-using Random, Statistics, LinearAlgebra, Test, FillArrays, Printf, TotalLeastSquares, ProximalOperators
+using Random, Statistics, LinearAlgebra, Test, FillArrays, Printf, TotalLeastSquares
 Random.seed!(0)
 
 
@@ -64,14 +64,14 @@ Random.seed!(0)
         0.0490157  0.0        6.5061e-7  0.312169  0.0      ;
         0.443569   0.0        0.714425   0.0       0.192445]
 
-        Â, Ê,_,_ = rpca(D, nonnegE=true, nonnegA=true, verbose=true)
+        Â, Ê,_,_ = rpca(D, nonnegE=true, nonnegA=true, verbose=false)
 
         @test Â ≈ A atol=1.0e-6
         @test Ê ≈ E atol=1.0e-6
         @test norm(D - (Â + Ê))/norm(D) < sqrt(eps())
 
 
-        Â, Ê,_,_ = rpca(D, nonnegE=false, nonnegA=false, verbose=true)
+        Â, Ê,_,_ = rpca(D, nonnegE=false, nonnegA=false, verbose=false)
         @test norm(D - (Â + Ê))/norm(D) < sqrt(eps())
 
     end
@@ -110,34 +110,34 @@ Random.seed!(0)
     @show mean(passes)
     @test mean(passes) > 0.9
 
-    @testset "Elastic Net rtls" begin
-        @info "Testing Elastic Net rtls"
-        passes = map(1:500) do _
-            x     = randn(10)
-            A     = randn(100,3) * randn(3,10)
-            σs    = 50
-            σd    = 0.5
-            S     = σs*randn(size(A)) .* (rand(size(A)...) .< 0.1)
-            D     = σd*randn(size(A))
-            N     = S + D
-            An    = A + N
-
-            Ah,Eh,_,_ = rpca(An, verbose=false)
-
-            λ = 1/sqrt(100)
-            μ = 0.001λ
-            Ah2,Eh2,_,_ = rpca(An, verbose=false, proxE = ElasticNet(λ, μ))
-
-            sum(abs2, Ah - A)/sum(abs2,A) < sum(abs2, An - A)/sum(abs2,A),
-            sum(abs2, Eh2 - N)/sum(abs2,N) < sum(abs2, Eh - N)/sum(abs2,N)
-        end
-        @show mean(getindex.(passes, 1))
-        @test mean(getindex.(passes, 1)) > 0.9
-        @show mean(getindex.(passes, 2))
-        @test mean(getindex.(passes, 2)) > 0.9
-
-
-    end
+    # @testset "Elastic Net rtls" begin
+    #     @info "Testing Elastic Net rtls"
+    #     passes = map(1:500) do _
+    #         x     = randn(10)
+    #         A     = randn(100,3) * randn(3,10)
+    #         σs    = 50
+    #         σd    = 0.5
+    #         S     = σs*randn(size(A)) .* (rand(size(A)...) .< 0.1)
+    #         D     = σd*randn(size(A))
+    #         N     = S + D
+    #         An    = A + N
+    #
+    #         Ah,Eh,_,_ = rpca(An, verbose=false)
+    #
+    #         λ = 1/sqrt(100)
+    #         μ = 0.001λ
+    #         Ah2,Eh2,_,_ = rpca(An, verbose=false, proxE = ElasticNet(λ, μ))
+    #
+    #         sum(abs2, Ah - A)/sum(abs2,A) < sum(abs2, An - A)/sum(abs2,A),
+    #         sum(abs2, Eh2 - N)/sum(abs2,N) < sum(abs2, Eh - N)/sum(abs2,N)
+    #     end
+    #     @show mean(getindex.(passes, 1))
+    #     @test mean(getindex.(passes, 1)) > 0.9
+    #     @show mean(getindex.(passes, 2))
+    #     @test mean(getindex.(passes, 2)) > 0.9
+    #
+    #
+    # end
 
 end
 
