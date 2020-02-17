@@ -19,6 +19,7 @@ These functions are exported:
 - `x = wls(A,y,Qyy)` Solves the weighted standard LS problem. `Qyy` is the covariance matrix of the residuals with side length equal to the length of `y`.
 - `x = rtls(A,y)` Solves a robust TLS problem. Both `A` and `y` are assumed to be corrupted with high magnitude, but sparse, noise. See analysis below.
 - `Â, Ê, s, sv = rpca(D; kwargs...)` robust matrix recovery using robust PCA. Solves `minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E`
+- `Q = rpca_ga(X, r; kwargs...)` robust PCA using Grassmann averages. Returns the pricipal components up to rank `r`.
 
 ## Example
 ```julia

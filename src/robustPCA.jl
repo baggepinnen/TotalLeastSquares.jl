@@ -1,4 +1,3 @@
-# using ProximalOperators
 @inline soft_th(x, ϵ) = max(x-ϵ,zero(x)) + min(x+ϵ,zero(x))
 @inline soft_th(x, ϵ, l) = max(x-ϵ,l) + min(x+ϵ,l) - l
 
@@ -112,4 +111,113 @@ function rpca(D::AbstractMatrix{T};
     end
 
     A, E, s, sv
+end
+
+"""
+    Q = rpca_ga(X::AbstractMatrix{T}, r=minimum(size(X)), U=similar(X); μ = μ!(s,w,U), verbose=false, kwargs...) where T
+
+"Grassmann Averages for Scalable Robust PCA", Hauberg et al.
+http://www2.compute.dtu.dk/~sohau/papers/cvpr2014a/Hauberg_CVPR_2014.pdf
+
+#Arguments:
+- `X`: Data matrix
+- `r`: Rank (number of components to estimate
+- `U`: Optional pre-allocated buffer
+- `verbose`: print status
+- `kwargs`: such as `tol=1e-7`, `iters=1000`
+- `μ = μ!(s,w,U)` is a function that calculates the spherical average of a all columns in the matrix `U`, weighted by `w` and stores the result in `s`. The default is the standard weighted average. To get a robust estimate, consider using a robust average, such as `entrywise_trimmed_mean` or `entrywise_median` etc.
+"""
+function rpca_ga(X::AbstractMatrix{T}, r=minimum(size(X)), U = similar(X); verbose = false, kwargs...) where T
+    d,N    = size(X)
+    X      = copy(X)
+    Xs1    = similar(X,1,N)
+    Xs2    = similar(X)
+    Q      = zeros(T, d, r)
+    w      = zeros(T,N)
+    Xnorms = zeros(T,N)
+    for i = 1:r
+        @inbounds @views for n = 1:N
+            Xnorms[n] = sqrt(sum(abs2,X[:,n]))
+            U[:,n] .=  X[:,n] ./ Xnorms[n]
+        end
+        q = rpca_ga_1(Xnorms, U, w; verbose = verbose, kwargs...)
+        Q[:,i] .= q
+        mul!(Xs1, q', X)
+        mul!(X, q,Xs1, -1, 1)
+    end
+    Q
+end
+
+function rpca_ga_1(Xnorms,U::AbstractMatrix{T},w; tol=1e-7, iters=1000, verbose=false, μ=μ!) where {T}
+    d,N = size(U)
+
+    q = randn(d)
+    q ./= norm(q)
+    qold = copy(q)
+
+    for i = 1:iters
+        @inbounds @views for n = eachindex(w,Xnorms)
+            w[n] = sign(U[:,n]'q)*Xnorms[n]
+        end
+        μᵢ = μ(q,w,U)
+        q .= μᵢ./norm(μᵢ)
+        dq = sqrt(sum(((x,y),)->abs2(x-y), zip(q,qold)))
+        verbose && @info "Change at iteration $i: $dq"
+        if dq < tol
+            verbose && @info "Converged after $i iterations"
+            break
+        end
+        qold .= q
+        i == iters && @warn "Reached maximum number of iterations"
+    end
+    q
+end
+
+function μ!(s,w,U)
+    ws = zero(eltype(w))
+    s .= 0
+    @views @inbounds @simd for n = 1:size(U,2)
+        ws += w[n]
+        s .+= w[n].*U[:,n]
+    end
+    s ./= ws
+end
+
+"""
+    entrywise_trimmed_mean(s, w, U, P=0.1)
+
+Remove `P` percent of the data on each side before computing the weighted mean.
+"""
+function entrywise_trimmed_mean(s,w,U, P=0.1)
+    N = size(U,2)
+    range = (1+floor(Int, P*N)):floor(Int, (1-P)*N)
+    s .= 0
+    @views for j = 1:size(U,1)
+        I = sortperm(U[j,:])[range]
+        s[j] += w[I]'U[j,I] / sum(w[I])
+        # s[j] += sum(U[j,I])/length(I)
+    end
+    s
+end
+#
+#
+# function entrywise_trimmed_mean(s,w,U, P=0.05)
+#     d,N = size(U)
+#     range = (1+floor(Int, P*d)):floor(Int, (1-P)*d)
+#     s .= 0
+#     ws = zeros(size(s))
+#     @views for j = 1:size(U,2)
+#         I = sortperm(U[:,j])[range]
+#         s[I] .+= w[j] .* U[I,j]
+#         ws[I] .+= w[j]
+#     end
+#     s./ws
+# end
+
+function entrywise_median(s,w,U)
+    s .= 0
+    for j = 1:size(U,1)
+        s[j] = median(sign.(w).*U[j,:])#, StatsBase.Weights(abs.(w)))
+    end
+    s
 end

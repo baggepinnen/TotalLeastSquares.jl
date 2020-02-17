@@ -1,7 +1,7 @@
 module TotalLeastSquares
 export tls, tls!, wtls, wls, rtls, rowcovariance
-export rpca
-using FillArrays, Printf, LinearAlgebra, SparseArrays
+export rpca, rpca_ga, entrywise_median, entrywise_trimmed_mean, μ!
+using FillArrays, Printf, LinearAlgebra, SparseArrays, Statistics
 
 """
     wls(A,y,Σ)

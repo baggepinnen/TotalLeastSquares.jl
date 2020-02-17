@@ -1,4 +1,4 @@
-using Random, Statistics, LinearAlgebra, Test, FillArrays, Printf, TotalLeastSquares
+using Random, Statistics, LinearAlgebra, Test, FillArrays, Printf, TotalLeastSquares, StatsBase
 Random.seed!(0)
 
 
@@ -234,5 +234,88 @@ end
 
 end
 
+@testset "rpca_ga" begin
+    @info "Testing rpca_ga"
+
+    Random.seed!(1)
+    for r = 1:10, ϵ = exp10.(LinRange(-8, 0, 20))
+        s = svd(randn(10,40))
+        u,v = s.U[:,1:r], s.V[:,1:r]
+        A = u*Diagonal(10*(1:r))*v' .+ ϵ .* randn.()
+        Q = rpca_ga(A, r, verbose=false)
+        @test rank([Q u], atol=ϵ) == r # Q and u should span the same space, but they may not share any other properties
+        @test norm(Q'Q - I) < sqrt(eps())
+    end
+
+    # Below is the reverse dimensions of above
+    for r = 1:10, ϵ = exp10.(LinRange(-8, 0, 20))
+        s = svd(randn(40,10))
+        u,v = s.U[:,1:r], s.V[:,1:r]
+        A = u*Diagonal(10*(1:r))*v' .+ ϵ .* randn.()
+        Q = rpca_ga(A, r, verbose=false)
+        @test rank([Q u], atol=ϵ) == r # Q and u should span the same space, but they may not share any other properties
+        @test norm(Q'Q - I) < sqrt(eps())
+    end
+
+    @testset "entrywise trimmed mean" begin
+        @info "Testing entrywise trimmed mean"
+
+        U = randn(10,10)
+        s = zeros(10)
+        w = ones(10)
+        m1 = TotalLeastSquares.μ!(s,w,U)
+        @test m1 ≈ mean(U, dims=2)
+
+        m2 = TotalLeastSquares.entrywise_trimmed_mean(s,w,U,0)
+        @test m2 ≈ mean(U, dims=2)
+
+        w = randn(10)
+        m1 = TotalLeastSquares.μ!(s,w,U)
+        @test m1 ≈ sum(U .* w', dims=2)./ sum(w)
+
+        m2 = TotalLeastSquares.entrywise_trimmed_mean(s,w,U,0)
+        @test m2 ≈ sum(U .* w', dims=2)./ sum(w)
+
+        w = ones(10)
+        m2 = TotalLeastSquares.entrywise_trimmed_mean(s,w,U,0.1)
+        for i in eachindex(m2)
+            @test m2[i] == mean(StatsBase.trim(U[i,:], prop=0.1))
+        end
+
+        r = 3; ϵ = 1e-8
+        Random.seed!(1)
+        passes = map(Iterators.product(1:4, exp10.(LinRange(-8, -1, 3)))) do (r,ϵ)
+            # @show r, ϵ
+            s = svd(randn(10,1000))
+            u,v = s.U[:,1:r], s.V[:,1:r]
+            # A = u*Diagonal(10*(1:r))*v' .+ ϵ .* randn.()
+            A = u*Diagonal(s.S[1:r])*v' .+ ϵ .* randn.()
+            A .+= 1000*randn.() .* (rand.() .< 0.01)
+
+            Qtm = rpca_ga(A, r, verbose=false, μ = TotalLeastSquares.entrywise_trimmed_mean, iters=120)
+            Qm = rpca_ga(A, r, verbose=false, iters=120)
+            sum(svdvals([Qtm u])[r+1:2r]) < sum(svdvals([Qm u])[r+1:2r])
+            # @test norm(Q'Q - I) < r*sqrt(eps())
+        end
+        @show mean(passes)
+        @test mean(passes) > 0.8
+
+        passes = map(Iterators.product(1:4, exp10.(LinRange(-8, -1, 3)))) do (r,ϵ)
+            # @show r, ϵ
+            s = svd(randn(10,1000))
+            u,v = s.U[:,1:r], s.V[:,1:r]
+            # A = u*Diagonal(10*(1:r))*v' .+ ϵ .* randn.()
+            A = u*Diagonal(s.S[1:r])*v' .+ ϵ .* randn.()
+            A .+= 1000*randn.() .* (rand.() .< 0.01)
+
+            Qmed = rpca_ga(A, r, verbose=false, μ = TotalLeastSquares.entrywise_median, iters=120)
+            Qm = rpca_ga(A, r, verbose=false, iters=120)
+            sum(svdvals([Qmed u])[r+1:2r]) < sum(svdvals([Qm u])[r+1:2r])
+            # @test norm(Q'Q - I) < r*sqrt(eps())
+        end
+        @show mean(passes)
+        @test mean(passes) > 0.9
+    end
+end
 
 end
