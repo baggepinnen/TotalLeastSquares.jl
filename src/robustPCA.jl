@@ -23,7 +23,8 @@ end
 
 minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E
 
-Ref: "The Augmented Lagrange Multiplier Method for Exact Recovery of Corrupted Low-Rank Matrices", https://people.eecs.berkeley.edu/~yima/psfile/Lin09-MP.pdf
+Ref: "The Augmented Lagrange Multiplier Method for Exact Recovery of Corrupted Low-Rank Matrices", Zhouchen Lin, Minming Chen, Leqin Wu, Yi Ma, https://people.eecs.berkeley.edu/~yima/psfile/Lin09-MP.pdf
+Significant inspiration taken from an early implementation by Ryuichi Yamamoto in RobustPCA.jl
 
 #Arguments:
 - `D`: Design matrix
@@ -35,7 +36,7 @@ Ref: "The Augmented Lagrange Multiplier Method for Exact Recovery of Corrupted L
 - `nonnegA`: Hard thresholding on A
 - `nonnegE`: Hard thresholding on E
 - `nukeA`: Activate the nuclear penalty on `A`, if `false`, then `A` is not assumed to be low rank.
-- `toeplitz`: Indicating whether or not `D` (and thus `A` and `E`) are Toeplitz matrices (constant diagonals). If this fact is known, the expected performance of this alogorithm goes up. If the matrix `D` is Hankel (constant antidiagonals) you may reverse the second dimension, i.e., `Dᵣ = D[:,end:-1:1]`. `toeplitz=true` should likely be paired with `nukeA=false`. 
+- `toeplitz`: Indicating whether or not `D` (and thus `A` and `E`) are Toeplitz matrices (constant diagonals). If this fact is known, the expected performance of this alogorithm goes up. If the matrix `D` is Hankel (constant antidiagonals) you may reverse the second dimension, i.e., `Dᵣ = D[:,end:-1:1]`. `toeplitz=true` should likely be paired with `nukeA=false`.
 """
 function rpca(D::AbstractMatrix{T};
                           λ              = T(1.0/sqrt(maximum(size(D)))),
@@ -70,9 +71,9 @@ function rpca(D::AbstractMatrix{T};
         if nonnegE
             E .= max.(E, 0)
         end
-        s = svd(D .- E .+ (1/μ) .* Y)
+        s = svd(Z .= D .- E .+ (1/μ) .* Y) # Z assignment just for storage
         U,S,V = s
-        svp = trunc(Int, sum(s.S .> 1/μ))
+        svp = trunc(Int, sum(>=(1/μ), s.S))
         if svp < sv
             sv = min(svp + 1, N)
         else
