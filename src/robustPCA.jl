@@ -142,12 +142,19 @@ function rpca_ga(X::AbstractMatrix{T}, r=minimum(size(X)), U = similar(X); verbo
         end
         q = rpca_ga_1(Xnorms, U, w; verbose = verbose, kwargs...)
         Q[:,i] .= q
-        mul!(Xs1, q', X)
-        mul!(X, q,Xs1, -1, 1)
+        @static if VERSION >= v"1.3"
+            mul!(Xs1, q', X)
+            mul!(X, q,Xs1, -1, 1)
+        else
+            X .-= q*(q'X)
+        end
     end
     Q
 end
 
+"""
+Find the first principal component. This is an internal function used by `rpca_ga`.
+"""
 function rpca_ga_1(Xnorms,U::AbstractMatrix{T},w; tol=1e-7, iters=1000, verbose=false, μ=μ!) where {T}
     d,N = size(U)
 
