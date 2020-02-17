@@ -18,7 +18,7 @@ These functions are exported:
   Takes row-wise covariance matrices `QAy[i]` and returns the full (sparse) covariance matrices. `rowQ = [cov([A[i,:] y[i]]) for i = 1:length(y)]`
 - `x = wls(A,y,Qyy)` Solves the weighted standard LS problem. `Qyy` is the covariance matrix of the residuals with side length equal to the length of `y`.
 - `x = rtls(A,y)` Solves a robust TLS problem. Both `A` and `y` are assumed to be corrupted with high magnitude, but sparse, noise. See analysis below.
-- `Â, Ê = rpca(D; kwargs...)` robust matrix recovery using robust PCA. Solves `minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E`
+- `Â, Ê, s, sv = rpca(D; kwargs...)` robust matrix recovery using robust PCA. Solves `minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E`
 
 ## Example
 ```julia

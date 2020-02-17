@@ -20,9 +20,11 @@ function soft_toeplitz!(A, ϵ)
 end
 
 """
-    rpca(D::Matrix; λ=1.0 / √(maximum(size(D))), iters=1000, tol=1.0e-7, ρ=1.5, verbose=false, nonnegA=false, nonnegE=false, nukeA=true)
+    A,E,s,sv = rpca(D::Matrix; λ=1.0 / √(maximum(size(D))), iters=1000, tol=1.0e-7, ρ=1.5, verbose=false, nonnegA=false, nonnegE=false, nukeA=true)
 
 minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E
+
+`s` is the last calculated svd of `A` and `sv` is the estimated rank.
 
 Ref: "The Augmented Lagrange Multiplier Method for Exact Recovery of Corrupted Low-Rank Matrices", Zhouchen Lin, Minming Chen, Leqin Wu, Yi Ma, https://people.eecs.berkeley.edu/~yima/psfile/Lin09-MP.pdf
 Significant inspiration taken from an early implementation by Ryuichi Yamamoto in RobustPCA.jl
@@ -64,7 +66,7 @@ function rpca(D::AbstractMatrix{T};
     μ         = T(1.25) / norm²
     μ̄         = μ  * T(1.0e+7)
     sv        = 10
-
+    local s, svp
     for k = 1:iters
         prox!(E, proxE, D .- A .+ (1/μ) .* Y, 1/μ)
         # E .= soft_th.(D .- A .+ (1/μ) .* Y, λ/μ)
@@ -76,17 +78,17 @@ function rpca(D::AbstractMatrix{T};
         end
         s = svd(Z .= D .- E .+ (1/μ) .* Y) # Z assignment just for storage
         U,S,V = s
-        svp = trunc(Int, sum(>=(1/μ), s.S))
+        svp = sum(>=(1/μ), S)
         if svp < sv
-            sv = min(svp + 1, N)
+            sv = svp # min(svp + 1, N) # the paper says to use these formulas but sv=svp works way better
         else
-            sv = min(svp + round(T(0.05) * d), d)
+            sv = svp # min(svp + round(Int, T(0.05) * d), d)
         end
 
         if nukeA
-            A .= U[:,1:svp] * Diagonal(S[1:svp] .- 1/μ) * V[:,1:svp]'
+            A .= U[:,1:sv] * Diagonal(S[1:sv] .- 1/μ) * V[:,1:sv]'
         else
-            A .= U[:,1:svp] * Diagonal(S[1:svp]) * V[:,1:svp]'
+            A .= U[:,1:sv] * Diagonal(S[1:sv]) * V[:,1:sv]'
         end
         if toeplitz
             soft_toeplitz!(A, λ/μ)
@@ -109,5 +111,5 @@ function rpca(D::AbstractMatrix{T};
         k == iters && @warn "Maximum number of iterations reached, cost: $cost, tol: $tol"
     end
 
-    A, E
+    A, E, s, sv
 end

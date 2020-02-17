@@ -64,14 +64,14 @@ Random.seed!(0)
         0.0490157  0.0        6.5061e-7  0.312169  0.0      ;
         0.443569   0.0        0.714425   0.0       0.192445]
 
-        Â, Ê = rpca(D, nonnegE=true, nonnegA=true, verbose=true)
+        Â, Ê,_,_ = rpca(D, nonnegE=true, nonnegA=true, verbose=true)
 
         @test Â ≈ A atol=1.0e-6
         @test Ê ≈ E atol=1.0e-6
         @test norm(D - (Â + Ê))/norm(D) < sqrt(eps())
 
 
-        Â, Ê = rpca(D, nonnegE=false, nonnegA=false, verbose=true)
+        Â, Ê,_,_ = rpca(D, nonnegE=false, nonnegA=false, verbose=true)
         @test norm(D - (Â + Ê))/norm(D) < sqrt(eps())
 
     end
@@ -87,7 +87,7 @@ Random.seed!(0)
         yn  = y + σ*randn(size(y)) .* (rand(size(y)...) .< 0.1)
 
         AA  = [An yn]
-        Ah,Eh = rpca(AA, verbose=false)
+        Ah,Eh,_,_ = rpca(AA, verbose=false)
 
         sum(abs2, Ah - [A y])/sum(abs2,[A y]) < sum(abs2, AA - [A y])/sum(abs2,[A y])
     end
@@ -122,11 +122,11 @@ Random.seed!(0)
             N     = S + D
             An    = A + N
 
-            Ah,Eh = rpca(An, verbose=false)
+            Ah,Eh,_,_ = rpca(An, verbose=false)
 
             λ = 1/sqrt(100)
             μ = 0.001λ
-            Ah2,Eh2 = rpca(An, verbose=false, proxE = ElasticNet(λ, μ))
+            Ah2,Eh2,_,_ = rpca(An, verbose=false, proxE = ElasticNet(λ, μ))
 
             sum(abs2, Ah - A)/sum(abs2,A) < sum(abs2, An - A)/sum(abs2,A),
             sum(abs2, Eh2 - N)/sum(abs2,N) < sum(abs2, Eh - N)/sum(abs2,N)
@@ -151,30 +151,33 @@ end
     end
     @info "Testing soft toeplitz"
     A = [1 2 3 4;
-         5 1 2 3;
-         6 5 1 2;
-         7 6 5 1;
-         8 7 6 5]
+        5 1 2 3;
+        6 5 1 2;
+        7 6 5 1;
+        8 7 6 5]
     @test istoeplitz(A)
-     An = A + 0.1randn(size(A))
-     @test !istoeplitz(An)
-     Anc = copy(An)
-     TotalLeastSquares.soft_toeplitz!(An, 0.1)
-     @test sum(abs2,An-A) < sum(abs2,Anc-A)
-
-     An = -A + 0.1randn(size(A))
-     Anc = copy(An)
-     TotalLeastSquares.soft_toeplitz!(An, 0.1)
-     @test sum(abs2,An+A) < sum(abs2,Anc+A)
-
-
-    An = Float64.(A)
-    An[diagind(A,0)] .+= 0.1
-    An[diagind(A,-1)] .-= 0.1
+    An = A + 0.1randn(size(A))
+    @test !istoeplitz(An)
     Anc = copy(An)
-    A1,E1 = rpca(An, verbose=true, nukeA=false)
-    A2,E2 = rpca(An, verbose=true, nukeA=false, toeplitz=true)
-    @test sum(abs2,A2-A) < sum(abs2,A1-A)
+    TotalLeastSquares.soft_toeplitz!(An, 0.1)
+    @test sum(abs2,An-A) < sum(abs2,Anc-A)
+
+    An = -A + 0.1randn(size(A))
+    Anc = copy(An)
+    TotalLeastSquares.soft_toeplitz!(An, 0.1)
+    @test sum(abs2,An+A) < sum(abs2,Anc+A)
+
+    passes = map(1:100) do _
+        An = Float64.(A)
+        An[diagind(A,0)] .+= randn.()
+        An[diagind(A,-1)] .-= randn.()
+        Anc = copy(An)
+        A1,E1,_,_ = rpca(An, verbose=false, nukeA=false)
+        A2,E2,_,_ = rpca(An, verbose=false, nukeA=false, toeplitz=true)
+        sum(abs2,A2-A) < sum(abs2,A1-A)
+    end
+    @show mean(passes)
+    @test mean(passes) > 0.5
 
     @info "Small random Toeplitz"
     passes = map(1:500) do _
@@ -193,8 +196,8 @@ end
             end
         end
         @test istoeplitz(A)
-        A1,E1 = rpca(A, verbose=false, nukeA=false)
-        A2,E2 = rpca(A, verbose=false, nukeA=false, toeplitz=true)
+        A1,E1,_,_ = rpca(A, verbose=false, nukeA=false)
+        A2,E2,_,_ = rpca(A, verbose=false, nukeA=false, toeplitz=true)
         @test istoeplitz(A2)
         @test istoeplitz(E2)
         mean(abs2,A2-A) < mean(abs2,A1-A)
@@ -219,8 +222,8 @@ end
             end
         end
         @test istoeplitz(A)
-        A1,E1 = rpca(A, verbose=false, nukeA=false)
-        A2,E2 = rpca(A, verbose=false, nukeA=false, toeplitz=true)
+        A1,E1,_,_ = rpca(A, verbose=false, nukeA=false)
+        A2,E2,_,_ = rpca(A, verbose=false, nukeA=false, toeplitz=true)
         @test istoeplitz(A2)
         @test istoeplitz(E2)
         mean(abs2,A2-A) < mean(abs2,A1-A)
@@ -228,33 +231,6 @@ end
     @show mean(passes)
     @test mean(passes) >= 0.5
 
-
-    @info "Small random Toeplitz elastic net"
-    error("not done")
-    passes = map(1:500) do _
-        y = randn(100)
-        A = zeros(95,5)
-        for i in 0:size(A,1)-1
-            di = diagind(A,-i)
-            for di in di
-                A[di] = y[i+2]
-            end
-        end
-        for i in 1:size(A,2)-1
-            di = diagind(A,i)
-            for di in di
-                A[di] = y[5-i+1]
-            end
-        end
-        @test istoeplitz(A)
-        A1,E1 = rpca(A, verbose=false, nukeA=false)
-        A2,E2 = rpca(A, verbose=false, nukeA=false, toeplitz=true)
-        @test istoeplitz(A2)
-        @test istoeplitz(E2)
-        mean(abs2,A2-A) < mean(abs2,A1-A)
-    end
-    @show mean(passes)
-    @test mean(passes) > 0.78
 
 end
 
