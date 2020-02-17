@@ -1,3 +1,4 @@
+using ProximalOperators
 @inline soft_th(x, ϵ) = max(x-ϵ,zero(x)) + min(x+ϵ,zero(x))
 @inline soft_th(x, ϵ, l) = max(x-ϵ,l) + min(x+ϵ,l) - l
 
@@ -47,6 +48,7 @@ function rpca(D::AbstractMatrix{T};
                           nonnegA::Bool  = false,
                           nonnegE::Bool  = false,
                           toeplitz::Bool = false,
+                          proxE          = NormL1(λ),
                           nukeA          = true) where T
 
     M, N      = size(D)
@@ -64,7 +66,8 @@ function rpca(D::AbstractMatrix{T};
     sv        = 10
 
     for k = 1:iters
-        E .= soft_th.(D .- A .+ (1/μ) .* Y, λ/μ)
+        prox!(E, proxE, D .- A .+ (1/μ) .* Y, 1/μ)
+        # E .= soft_th.(D .- A .+ (1/μ) .* Y, λ/μ)
         if toeplitz
             soft_toeplitz!(E, λ/μ)
         end
@@ -103,6 +106,7 @@ function rpca(D::AbstractMatrix{T};
             verbose && println("converged")
             break
         end
+        k == iters && @warn "Maximum number of iterations reached, cost: $cost, tol: $tol"
     end
 
     A, E

@@ -1,4 +1,4 @@
-using Random, Statistics, LinearAlgebra, Test, FillArrays, Printf, TotalLeastSquares
+using Random, Statistics, LinearAlgebra, Test, FillArrays, Printf, TotalLeastSquares, ProximalOperators
 Random.seed!(0)
 
 
@@ -91,6 +91,7 @@ Random.seed!(0)
 
         sum(abs2, Ah - [A y])/sum(abs2,[A y]) < sum(abs2, AA - [A y])/sum(abs2,[A y])
     end
+    @show mean(passes)
     @test mean(passes) > 0.9
 
     passes = map(1:1000) do _
@@ -106,7 +107,37 @@ Random.seed!(0)
 
         norm(x-x̂r) < norm(x-x̂t)
     end
-    @test mean(passes) > 0.8
+    @show mean(passes)
+    @test mean(passes) > 0.9
+
+    @testset "Elastic Net rtls" begin
+        @info "Testing Elastic Net rtls"
+        passes = map(1:500) do _
+            x     = randn(10)
+            A     = randn(100,3) * randn(3,10)
+            σs    = 50
+            σd    = 0.5
+            S     = σs*randn(size(A)) .* (rand(size(A)...) .< 0.1)
+            D     = σd*randn(size(A))
+            N     = S + D
+            An    = A + N
+
+            Ah,Eh = rpca(An, verbose=false)
+
+            λ = 1/sqrt(100)
+            μ = 0.001λ
+            Ah2,Eh2 = rpca(An, verbose=false, proxE = ElasticNet(λ, μ))
+
+            sum(abs2, Ah - A)/sum(abs2,A) < sum(abs2, An - A)/sum(abs2,A),
+            sum(abs2, Eh2 - N)/sum(abs2,N) < sum(abs2, Eh - N)/sum(abs2,N)
+        end
+        @show mean(getindex.(passes, 1))
+        @test mean(getindex.(passes, 1)) > 0.9
+        @show mean(getindex.(passes, 2))
+        @test mean(getindex.(passes, 2)) > 0.9
+
+
+    end
 
 end
 
@@ -145,6 +176,7 @@ end
     A2,E2 = rpca(An, verbose=true, nukeA=false, toeplitz=true)
     @test sum(abs2,A2-A) < sum(abs2,A1-A)
 
+    @info "Small random Toeplitz"
     passes = map(1:500) do _
         y = randn(100)
         A = zeros(95,5)
@@ -170,7 +202,7 @@ end
     @show mean(passes)
     @test mean(passes) > 0.78
 
-
+    @info "Big random Toeplitz"
     passes = map(1:10) do _
         y = randn(1000)
         A = zeros(950,50)
@@ -195,6 +227,34 @@ end
     end
     @show mean(passes)
     @test mean(passes) >= 0.5
+
+
+    @info "Small random Toeplitz elastic net"
+    error("not done")
+    passes = map(1:500) do _
+        y = randn(100)
+        A = zeros(95,5)
+        for i in 0:size(A,1)-1
+            di = diagind(A,-i)
+            for di in di
+                A[di] = y[i+2]
+            end
+        end
+        for i in 1:size(A,2)-1
+            di = diagind(A,i)
+            for di in di
+                A[di] = y[5-i+1]
+            end
+        end
+        @test istoeplitz(A)
+        A1,E1 = rpca(A, verbose=false, nukeA=false)
+        A2,E2 = rpca(A, verbose=false, nukeA=false, toeplitz=true)
+        @test istoeplitz(A2)
+        @test istoeplitz(E2)
+        mean(abs2,A2-A) < mean(abs2,A1-A)
+    end
+    @show mean(passes)
+    @test mean(passes) > 0.78
 
 end
 

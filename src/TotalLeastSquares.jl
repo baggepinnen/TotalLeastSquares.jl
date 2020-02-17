@@ -54,7 +54,7 @@ a ⊗ b = kron(a,b)
     x = wtls(A,y,Qaa,Qay,Qyy; iters = 10)
 
 Solves min nᵀQ⁻¹n s.t. (A+E)x = y + v
-where Q = [Qaa Qay; Qay' Qyy], n = [vec(E); y]
+where Q = [Qaa Qay; Qay' Qyy], n = [vec(E); v]
 
 Uses algorithm 1 from
 Weighted total least squares: necessary and sufficient conditions,
