@@ -78,7 +78,7 @@ function rpca(D::AbstractMatrix{T};
         end
         s = svd(Z .= D .- E .+ (1/μ) .* Y) # Z assignment just for storage
         U,S,V = s
-        svp = sum(>=(1/μ), S)
+        svp = sum(x-> x >= (1/μ), S)
         if svp < sv
             sv = svp # min(svp + 1, N) # the paper says to use these formulas but sv=svp works way better
         else
