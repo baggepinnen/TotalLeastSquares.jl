@@ -2,21 +2,75 @@
 @inline soft_th(x, ϵ, l) = max(x-ϵ,l) + min(x+ϵ,l) - l
 
 function soft_toeplitz!(A, ϵ)
-    @inbounds for i in 0:size(A,1)-2
-        di = diagind(A,-i)
-        m = sum(A[j] for j in di)/length(di)
-        for di in di
-            A[di] = soft_th(A[di], ϵ, m)
-        end
-    end
-    @inbounds for i in 1:size(A,2)-2
+    @inbounds for i in -(size(A,1)-2):size(A,2)-2
         di = diagind(A,i)
         m = sum(A[j] for j in di)/length(di)
         for di in di
             A[di] = soft_th(A[di], ϵ, m)
         end
     end
+    A
 end
+
+function untoeplitz(A)
+    K,L = size(A)
+    y = similar(A, K+L-1)
+    k = K+L-1
+    for i in (-K+1:L-1)
+        di = diagind(A,i)
+        m = sum(A[j] for j in di)/length(di)
+        y[k] = m
+        k -= 1
+    end
+    y
+end
+
+"""
+    X = toeplitz(x,L)
+
+Form a toeplitz "trajectory matrix" `X` of size KxL, K = N-L+1
+x can be a vector or a matrix.
+"""
+function toeplitz(x,L)
+    N = size(x,1)
+    D = isa(x,AbstractVector) ? 1 : size(x,2)
+    @assert L <= N/2 "L has to be less than N/2 = $(N/2)"
+    K = N-L+1
+    X = zeros(K,L*D)
+    for d = 1:D
+        for j = 1:L, i = 1:K
+            k = i+j-1
+            X[i,L-(j+(d-1)*L)+1] = x[k,d]
+        end
+    end
+    X
+end
+
+function istoeplitz(A)
+    for i = size(A,2)-1:-1:(-size(A,1)+1)
+        di = diagind(A,i)
+        all(==(A[di[1]]), A[di]) || return false
+    end
+    true
+end
+
+
+"""
+    yf = lowrankfilter(y, n=min(length(y) ÷ 20, 2000); tol=1e-3, kwargs...)
+
+Filter time series `y` by forming a lag-embedding T (a Toeplitz matrix) and using [`rpca`](@ref) to recover a low-rank matrix from which the a filtered signal `yf` can be extracted. The size of the embedding `n` determines the complexity, higher `n` generally gives better filtering at the cost of roughly cubic complexity.
+
+#Arguments:
+- `y`: A signal to be filtered, assumed corrupted with sparse noise
+- `n`: Embedding size
+- `kwargs`: See [`rpca`](@ref) for keyword arguments.
+"""
+function lowrankfilter(y, n=min(length(y)÷20,2000); tol=1e-3, kwargs...)
+    T = toeplitz(y,n)
+    A,E = rpca(T; tol=tol, kwargs...)
+    untoeplitz(A)
+end
+
 
 """
     A,E,s,sv = rpca(D::Matrix; λ=1.0 / √(maximum(size(D))), iters=1000, tol=1.0e-7, ρ=1.5, verbose=false, nonnegA=false, nonnegE=false, nukeA=true)
@@ -224,7 +278,9 @@ end
 function entrywise_median(s,w,U)
     s .= 0
     for j = 1:size(U,1)
-        s[j] = median(sign.(w).*U[j,:])#, StatsBase.Weights(abs.(w)))
+        I = sortperm((w).*U[j,:])
+        s[j] = sign(w[I[end÷2]])*U[j,I[end÷2]]#, StatsBase.Weights(abs.(w)))
+        # s[j] = median(U[j,:])
     end
     s
 end

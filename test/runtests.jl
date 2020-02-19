@@ -141,15 +141,33 @@ Random.seed!(0)
 
 end
 
+
+# @testset "rtls ga" begin
+#     @info "Testing rtls ga"
+#
+#     passes = map(1:1000) do _
+#         x   = randn(5)
+#         A   = randn(500,5)
+#         σ   = 50
+#         An  = A + σ*randn(size(A)) .* (rand(size(A)...) .< 0.01)
+#         y   = A*x
+#         yn  = y + σ*randn(size(y)) .* (rand(size(y)...) .< 0.01)
+#
+#         x̂t = tls(An,yn)
+#         x̂r = rtls_ga(An,yn, μ=entrywise_median)
+#
+#         norm(x-x̂r) < norm(x-x̂t)
+#     end
+#     @show mean(passes)
+#     @test mean(passes) > 0.7
+#
+# end
+
 @testset "soft toeplitz" begin
-    function istoeplitz(A)
-        for i = size(A,2)-1:-1:(-size(A,1)+1)
-            di = diagind(A,i)
-            all(==(A[di[1]]), A[di]) || return false
-        end
-        true
-    end
     @info "Testing soft toeplitz"
+
+    @test toeplitz(1:20,2) == [2:20 1:19]
+
     A = [1 2 3 4;
         5 1 2 3;
         6 5 1 2;
@@ -234,6 +252,23 @@ end
 
 end
 
+
+@testset "lowrankfilter" begin
+    @info "Testing lowrankfilter"
+    T = 1000
+    t = 1:T
+    y = sin.(0.1 .* t)
+
+    H = toeplitz(y, 2)
+    @test istoeplitz(H)
+    @test untoeplitz(H) == y
+
+    n = 20randn(T) .* (rand(T) .< 0.01) + 0.1randn(T)
+    yf = lowrankfilter(y+n)
+    @test mean(abs2, y-yf)/mean(abs2, n) < 0.001
+
+end
+
 @testset "rpca_ga" begin
     @info "Testing rpca_ga"
 
@@ -295,7 +330,7 @@ end
             Qtm = rpca_ga(A, r, verbose=false, μ = TotalLeastSquares.entrywise_trimmed_mean, iters=120)
             Qm = rpca_ga(A, r, verbose=false, iters=120)
             sum(svdvals([Qtm u])[r+1:2r]) < sum(svdvals([Qm u])[r+1:2r])
-            # @test norm(Q'Q - I) < r*sqrt(eps())
+            # @test norm(Q'Q - I) < r*sqrt(eps()) # This test should pass but doesn't
         end
         @show mean(passes)
         @test mean(passes) > 0.8
@@ -311,7 +346,7 @@ end
             Qmed = rpca_ga(A, r, verbose=false, μ = TotalLeastSquares.entrywise_median, iters=120)
             Qm = rpca_ga(A, r, verbose=false, iters=120)
             sum(svdvals([Qmed u])[r+1:2r]) < sum(svdvals([Qm u])[r+1:2r])
-            # @test norm(Q'Q - I) < r*sqrt(eps())
+            # @test norm(Q'Q - I) < r*sqrt(eps())  # This test should pass but doesn't
         end
         @show mean(passes)
         @test mean(passes) > 0.9

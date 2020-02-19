@@ -20,6 +20,7 @@ These functions are exported:
 - `x = rtls(A,y)` Solves a robust TLS problem. Both `A` and `y` are assumed to be corrupted with high magnitude, but sparse, noise. See analysis below.
 - `Â, Ê, s, sv = rpca(D; kwargs...)` robust matrix recovery using robust PCA. Solves `minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E`
 - `Q = rpca_ga(X, r; kwargs...)` robust PCA using Grassmann averages. Returns the pricipal components up to rank `r`.
+- `yf = lowrankfilter(y, n; kwargs...)` Filter time series `y` by forming a lag-embedding T (a Toeplitz matrix) and using [`rpca`](@ref) to recover a low-rank matrix from which the a filtered signal `yf` can be extracted. Robustly filters large sparse outliers.
 
 ## Example
 ```julia

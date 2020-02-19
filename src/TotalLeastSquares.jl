@@ -1,6 +1,6 @@
 module TotalLeastSquares
-export tls, tls!, wtls, wls, rtls, rowcovariance
-export rpca, rpca_ga, entrywise_median, entrywise_trimmed_mean, μ!
+export tls, tls!, wtls, wls, rtls, rowcovariance, toeplitz, istoeplitz, untoeplitz
+export rpca, lowrankfilter, rpca_ga, entrywise_median, entrywise_trimmed_mean, μ!
 using FillArrays, Printf, LinearAlgebra, SparseArrays, Statistics
 
 """
@@ -132,7 +132,17 @@ function rtls(A::AbstractArray,y::AbstractArray; kwargs...)
     AA  = [A y]
     Ah,Eh = rpca(AA; nukeA=false, kwargs...)
     tls!(Ah,size(A,2))
-
 end
+
+# function rtls_ga(A::AbstractArray,y::AbstractArray; μ = μ!, kwargs...)
+#     AA  = [A y]
+#     m = mean(AA, dims=1)
+#     AA .-= m
+#     V = rpca_ga(AA'; μ = μ, kwargs...)
+#     n   = size(A,2)
+#     V21 = V[1:n,n+1:end]
+#     V22 = V[n+1:end,n+1:end]
+#     x   = -V21/V22
+# end
 
 end # module
