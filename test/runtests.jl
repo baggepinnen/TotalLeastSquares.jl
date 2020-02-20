@@ -74,6 +74,23 @@ Random.seed!(0)
         Â, Ê,_,_ = rpca(D, nonnegE=false, nonnegA=false, verbose=false)
         @test norm(D - (Â + Ê))/norm(D) < sqrt(eps())
 
+
+        @testset "Missing values" begin
+            @info "Testing Missing values"
+
+            res = map(1:20) do _
+                N = 500
+                y = sin.(0.1 .* (1:N)) .+ 0.1*randn(N)
+                miss = rand(N) .< 0.1
+                yn = y .+ miss .* 1e2
+                miss = findall(miss)
+                yf = lowrankfilter(yn,40)
+                mean(abs2,y-yf)/mean(abs2,y)
+            end
+            mean(res) < 0.025
+
+        end
+
     end
 
 @testset "rtls" begin

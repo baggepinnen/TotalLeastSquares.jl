@@ -70,6 +70,31 @@ We generate random data on the form `Ax=y` where both `A` and `y` are corrupted 
 
 The results indicate that the robust method is to be preferred when the noise is large but sparse.
 
+## Missing data imputation
+The robust methods handle missing data the same way as they handle outliers. You may indicate that an entry is missing simply by setting it to a very large value, e.g.,
+```julia
+N = 500
+y = sin.(0.1 .* (1:N)) .+ 0.1*randn(N) # Sinus + noise
+miss = rand(N) .< 0.1     # 10% missing values
+yn = y .+ miss .* 1e2    # Set missing values to very large number
+yf = lowrankfilter(yn,40) # Filter
+mean(abs2,y-yf)/mean(abs2,y) # Normalized error
+# 0.0200 # Two percent error in the recovery of y
+```
+To impute missing data in a matrix, we make use of `rpca`:
+```julia
+H = hankel(sin.(0.1 .* (1:N)), 5)  # A low-rank matrix
+miss = rand(size(H)...) .< 0.1     # 10% missing values
+Hn = H .+ 0.1randn(size(H)) .+ miss .* 1e2    # Set missing values to very large number
+Ĥ, E = rpca(Hn)
+mean(abs2,H-Ĥ)/mean(abs2,H) # Normalized error
+# 0.06 # Six percent error in the recovery of H
+```
+The matrix `E` contains the estimated outliers
+```julia
+vec(E)'vec(miss)/(norm(E)*norm(miss)) # These should correlate if all missing values were identified
+# 1.00
+```
 # Notes
 This package was developed for the thesis  
 [Bagge Carlson, F.](https://www.control.lth.se/staff/fredrik-bagge-carlson/), ["Machine Learning and System Identification for Estimation in Physical Systems"](https://lup.lub.lu.se/search/publication/ffb8dc85-ce12-4f75-8f2b-0881e492f6c0) (PhD Thesis 2018).
