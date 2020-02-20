@@ -1,55 +1,88 @@
 @inline soft_th(x, ϵ) = max(x-ϵ,zero(x)) + min(x+ϵ,zero(x))
 @inline soft_th(x, ϵ, l) = max(x-ϵ,l) + min(x+ϵ,l) - l
 
-function soft_toeplitz!(A, ϵ)
-    @inbounds for i in -(size(A,1)-2):size(A,2)-2
-        di = diagind(A,i)
-        m = sum(A[j] for j in di)/length(di)
-        for di in di
-            A[di] = soft_th(A[di], ϵ, m)
+function soft_hankel!(A, ϵ)
+    K,L = size(A)
+    N = K+L-1
+    for k = 1:N
+        ri = min(K,k):-1:max(k-L,1)
+        ci = max(1,k-K+1):L
+        m = mean(A[r,c] for (r,c) in zip(ri,ci))
+        for (r,c) in zip(ri,ci)
+            A[r,c] = soft_th(A[r,c], ϵ, m)
         end
     end
     A
 end
 
-function untoeplitz(A)
+function unhankel(A)
     K,L = size(A)
-    y = similar(A, K+L-1)
-    k = K+L-1
-    for i in (-K+1:L-1)
-        di = diagind(A,i)
-        m = sum(A[j] for j in di)/length(di)
+    N = L+(K-1)
+    y = similar(A, N)
+    for k = 1:N
+        ri = min(K,k):-1:max(k-L,1)
+        ci = max(1,k-K+1):L
+        m = mean(A[r,c] for (r,c) in zip(ri,ci))
         y[k] = m
-        k -= 1
     end
     y
 end
 
-"""
-    X = toeplitz(x,L)
 
-Form a toeplitz "trajectory matrix" `X` of size KxL, K = N-L+1
+function unhankel(A,lag,N,D=1)
+    lag == 1 && D == 1 && (return unhankel(A))
+    K      = size(A,1)
+    L      = size(A,2)÷D
+    y      = zeros(eltype(A), N, D)
+    counts = zeros(Int, N, D)
+    indmat = CartesianIndex.(1:N, (1:D)')
+    inds   = hankel(indmat, L, lag)
+    for (Aind,yind) in enumerate(inds)
+        y[yind] += A[Aind]
+        counts[yind] += 1
+    end
+    y ./= counts
+    D == 1 && (return vec(y))
+    y
+end
+
+"""
+    X = hankel(x,L,lag=1)
+
+Form a hankel "trajectory matrix" `X` of size KxL, K = N-L+1
 x can be a vector or a matrix.
 """
-function toeplitz(x,L)
+function hankel(x,L,lag=1)
     N = size(x,1)
-    D = isa(x,AbstractVector) ? 1 : size(x,2)
+    D = size(x,2)
     @assert L <= N/2 "L has to be less than N/2 = $(N/2)"
-    K = N-L+1
-    X = zeros(K,L*D)
-    for d = 1:D
-        for j = 1:L, i = 1:K
-            k = i+j-1
-            X[i,L-(j+(d-1)*L)+1] = x[k,d]
+    @assert lag <= L "lag must be <= L"
+    K = (N-L)÷lag+1
+    X = similar(x, K, L*D)
+    for d in 1:D
+        inds = 1:L
+        colinds = d:D:L*D
+        for k = 1:K
+            X[k,colinds] = x[inds,d]
+            inds = inds .+ lag
         end
     end
     X
 end
 
-function istoeplitz(A)
-    for i = size(A,2)-1:-1:(-size(A,1)+1)
-        di = diagind(A,i)
-        all(==(A[di[1]]), A[di]) || return false
+
+
+
+function ishankel(A)
+    K,L = size(A)
+    N = K+L-1
+    for k = 1:N
+        ri = min(K,k):-1:max(k-L,1)
+        ci = max(1,k-K+1):L
+        val = A[ri[1],ci[1]]
+        for (r,c) in zip(ri,ci)
+            A[r,c] != val && return false
+        end
     end
     true
 end
@@ -65,10 +98,10 @@ Filter time series `y` by forming a lag-embedding T (a Toeplitz matrix) and usin
 - `n`: Embedding size
 - `kwargs`: See [`rpca`](@ref) for keyword arguments.
 """
-function lowrankfilter(y, n=min(length(y)÷20,2000); tol=1e-3, kwargs...)
-    T = toeplitz(y,n)
-    A,E = rpca(T; tol=tol, kwargs...)
-    untoeplitz(A)
+function lowrankfilter(y, n=min(size(y,1)÷20,2000); lag=1, tol=1e-3, kwargs...)
+    H = hankel(y, n, lag)
+    A,E = rpca(H; tol=tol, kwargs...)
+    unhankel(A, lag, length(y), size(y,2))
 end
 
 
@@ -92,7 +125,7 @@ Significant inspiration taken from an early implementation by Ryuichi Yamamoto i
 - `nonnegA`: Hard thresholding on A
 - `nonnegE`: Hard thresholding on E
 - `nukeA`: Activate the nuclear penalty on `A`, if `false`, then `A` is not assumed to be low rank.
-- `toeplitz`: Indicating whether or not `D` (and thus `A` and `E`) are Toeplitz matrices (constant diagonals). If this fact is known, the expected performance of this alogorithm goes up. If the matrix `D` is Hankel (constant antidiagonals) you may reverse the second dimension, i.e., `Dᵣ = D[:,end:-1:1]`. `toeplitz=true` should likely be paired with `nukeA=false`.
+- `hankel`: Indicating whether or not `D` (and thus `A` and `E`) are Hankel matrices (constant anti diagonals). If this fact is known, the expected performance of this alogorithm goes up. If the matrix `D` is Toeplitz (constant diagonals) you may reverse the second dimension, i.e., `Dᵣ = D[:,end:-1:1]`. `hankel=true` should likely be paired with `nukeA=false`.
 """
 function rpca(D::AbstractMatrix{T};
                           λ              = T(1.0/sqrt(maximum(size(D)))),
@@ -102,7 +135,7 @@ function rpca(D::AbstractMatrix{T};
                           verbose::Bool  = false,
                           nonnegA::Bool  = false,
                           nonnegE::Bool  = false,
-                          toeplitz::Bool = false,
+                          hankel::Bool   = false,
                           # proxE          = NormL1(λ),
                           nukeA          = true) where T
 
@@ -111,10 +144,10 @@ function rpca(D::AbstractMatrix{T};
     A, E      = zeros(T, M, N), zeros(T, M, N)
     Z         = similar(D)
     Y         = copy(D)
-    norm²     = svdvals(Y)[1] # can be tuned
+    norm²     = opnorm(Y)::T # can be tuned
     norm∞     = norm(Y, Inf) / λ
     dual_norm = max(norm², norm∞)
-    d_norm    = opnorm(D)
+    d_norm    = norm²
     Y       ./= dual_norm
     μ         = T(1.25) / norm²
     μ̄         = μ  * T(1.0e+7)
@@ -123,35 +156,38 @@ function rpca(D::AbstractMatrix{T};
     for k = 1:iters
         # prox!(E, proxE, D .- A .+ (1/μ) .* Y, 1/μ)
         E .= soft_th.(D .- A .+ (1/μ) .* Y, λ/μ)
-        if toeplitz
-            soft_toeplitz!(E, λ/μ)
+        if hankel
+            soft_hankel!(E, λ/μ)
         end
         if nonnegE
             E .= max.(E, 0)
         end
-        s = svd(Z .= D .- E .+ (1/μ) .* Y) # Z assignment just for storage
-        U,S,V = s
-        svp = sum(x-> x >= (1/μ), S)
+        s = svd!(Z .= D .- E .+ (1/μ) .* Y) # Z assignment just for storage
+        svp = sum(x-> x >= (1/μ), s.S)::Int
         if svp < sv
             sv = svp # min(svp + 1, N) # the paper says to use these formulas but sv=svp works way better
         else
             sv = svp # min(svp + round(Int, T(0.05) * d), d)
         end
 
-        if nukeA
-            A .= U[:,1:sv] * Diagonal(S[1:sv] .- 1/μ) * V[:,1:sv]'
+        @views if nukeA
+            # A .= s.U[:,1:sv] * Diagonal(s.S[1:sv] .- 1/μ) * s.Vt[1:sv,:]
+            mul!(Z[:,1:sv], s.U[:,1:sv], Diagonal(s.S[1:sv] .- 1/μ))
+            mul!(A, Z[:,1:sv], s.Vt[1:sv,:])
         else
-            A .= U[:,1:sv] * Diagonal(S[1:sv]) * V[:,1:sv]'
+            # A .= s.U[:,1:sv] * Diagonal(s.S[1:sv]) * s.Vt[1:sv,:]
+            mul!(Z[:,1:sv], s.U[:,1:sv], Diagonal(s.S[1:sv]))
+            mul!(A, Z[:,1:sv], s.Vt[1:sv,:])
         end
-        if toeplitz
-            soft_toeplitz!(A, λ/μ)
+        if hankel
+            soft_hankel!(A, λ/μ)
         end
         if nonnegA
             A .= max.(A, 0)
         end
 
         @. Z = D - A - E # Z are the reconstruction errors
-        @. Y = Y + μ * Z
+        @. Y = Y + μ * Z # Y can not be moved below as it depends on μ which is changed below
         μ = min(μ*ρ, μ̄)
 
         cost = opnorm(Z) / d_norm

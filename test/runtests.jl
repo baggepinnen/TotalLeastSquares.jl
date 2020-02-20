@@ -163,91 +163,65 @@ end
 #
 # end
 
-@testset "soft toeplitz" begin
-    @info "Testing soft toeplitz"
+@testset "soft hankel" begin
+    @info "Testing soft hankel"
 
-    @test toeplitz(1:20,2) == [2:20 1:19]
+    @test hankel(1:20,2) == [1:19 2:20]
+    @test hankel(1:20,3,2) == [1:2:17 2:2:18 3:2:19]
 
-    A = [1 2 3 4;
-        5 1 2 3;
-        6 5 1 2;
-        7 6 5 1;
-        8 7 6 5]
-    @test istoeplitz(A)
+    A = hankel(1:8,4)
+    @test ishankel(A)
     An = A + 0.1randn(size(A))
-    @test !istoeplitz(An)
+    @test !ishankel(An)
     Anc = copy(An)
-    TotalLeastSquares.soft_toeplitz!(An, 0.1)
+    TotalLeastSquares.soft_hankel!(An, 0.1)
     @test sum(abs2,An-A) < sum(abs2,Anc-A)
 
     An = -A + 0.1randn(size(A))
     Anc = copy(An)
-    TotalLeastSquares.soft_toeplitz!(An, 0.1)
+    TotalLeastSquares.soft_hankel!(An, 0.1)
     @test sum(abs2,An+A) < sum(abs2,Anc+A)
 
     passes = map(1:100) do _
-        An = Float64.(A)
-        An[diagind(A,0)] .+= randn.()
-        An[diagind(A,-1)] .-= randn.()
+        y = randn(20)
+        yn = y .+ 0.1 .* randn.()
+        A = hankel(y,3)
+        An = hankel(yn,3)
         Anc = copy(An)
         A1,E1,_,_ = rpca(An, verbose=false, nukeA=false)
-        A2,E2,_,_ = rpca(An, verbose=false, nukeA=false, toeplitz=true)
+        A2,E2,_,_ = rpca(An, verbose=false, nukeA=false, hankel=true)
         sum(abs2,A2-A) < sum(abs2,A1-A)
     end
     @show mean(passes)
-    @test mean(passes) > 0.5
+    @test mean(passes) > 0.7
 
-    @info "Small random Toeplitz"
+    @info "Small random Hankel"
     passes = map(1:500) do _
         y = randn(100)
-        A = zeros(95,5)
-        for i in 0:size(A,1)-1
-            di = diagind(A,-i)
-            for di in di
-                A[di] = y[i+2]
-            end
-        end
-        for i in 1:size(A,2)-1
-            di = diagind(A,i)
-            for di in di
-                A[di] = y[5-i+1]
-            end
-        end
-        @test istoeplitz(A)
+        A = hankel(y,5)
+        @test ishankel(A)
         A1,E1,_,_ = rpca(A, verbose=false, nukeA=false)
-        A2,E2,_,_ = rpca(A, verbose=false, nukeA=false, toeplitz=true)
-        @test istoeplitz(A2)
-        @test istoeplitz(E2)
+        A2,E2,_,_ = rpca(A, verbose=false, nukeA=false, hankel=true)
+        @test ishankel(A2)
+        @test ishankel(E2)
         mean(abs2,A2-A) < mean(abs2,A1-A)
     end
     @show mean(passes)
-    @test mean(passes) > 0.78
+    @test mean(passes) > 0.8
 
-    @info "Big random Toeplitz"
+    @info "Big random Hankel"
     passes = map(1:10) do _
         y = randn(1000)
-        A = zeros(950,50)
-        for i in 0:size(A,1)-1
-            di = diagind(A,-i)
-            for di in di
-                A[di] = y[i+2]
-            end
-        end
-        for i in 1:size(A,2)-1
-            di = diagind(A,i)
-            for di in di
-                A[di] = y[50-i+1]
-            end
-        end
-        @test istoeplitz(A)
+        A = hankel(y,50)
+        @test ishankel(A)
         A1,E1,_,_ = rpca(A, verbose=false, nukeA=false)
-        A2,E2,_,_ = rpca(A, verbose=false, nukeA=false, toeplitz=true)
-        @test istoeplitz(A2)
-        @test istoeplitz(E2)
+        A2,E2,_,_ = rpca(A, verbose=false, nukeA=false, hankel=true)
+        @test ishankel(A2)
+        @test ishankel(E2)
         mean(abs2,A2-A) < mean(abs2,A1-A)
     end
     @show mean(passes)
-    @test mean(passes) >= 0.5
+    @test mean(passes) >= 0.8
 
 
 end
@@ -259,9 +233,22 @@ end
     t = 1:T
     y = sin.(0.1 .* t)
 
-    H = toeplitz(y, 2)
-    @test istoeplitz(H)
-    @test untoeplitz(H) == y
+    H = hankel(y, 2)
+    @test ishankel(H)
+    @test unhankel(H) == y
+
+    H = hankel(y,2,2)
+    yh = unhankel(H,2,T)
+    @test yh == y
+
+    H = hankel(y,5,2)
+    yh = unhankel(H,2,T)
+    @test yh[1:end-1] ≈ y[1:end-1]
+
+    y2 = randn(T)
+    H = hankel([y y2],5,2)
+    yh = unhankel(H,2,T,2)
+    @test yh[1:end-1,:] ≈ [y y2][1:end-1,:]
 
     n = 20randn(T) .* (rand(T) .< 0.01) + 0.1randn(T)
     yf = lowrankfilter(y+n)

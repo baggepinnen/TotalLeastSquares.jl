@@ -1,5 +1,5 @@
 module TotalLeastSquares
-export tls, tls!, wtls, wls, rtls, rowcovariance, toeplitz, istoeplitz, untoeplitz
+export tls, tls!, wtls, wls, rtls, rowcovariance, hankel, ishankel, unhankel
 export rpca, lowrankfilter, rpca_ga, entrywise_median, entrywise_trimmed_mean, μ!
 using FillArrays, Printf, LinearAlgebra, SparseArrays, Statistics
 
