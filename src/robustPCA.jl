@@ -15,6 +15,11 @@ function soft_hankel!(A, ϵ)
     A
 end
 
+"""
+    unhankel(A)
+
+The inverse of [`hankel`](@ref). Create a 1-D signal by antidiagonal averaging
+"""
 function unhankel(A)
     K,L = size(A)
     N = L+(K-1)
@@ -29,6 +34,17 @@ function unhankel(A)
 end
 
 
+"""
+    unhankel(A, lag, N, D=1)
+
+The inverse of [`hankel`](@ref). Create a 1-D signal by antidiagonal averaging
+
+#Arguments:
+- `A`: A Hankel matrix
+- `lag`: if lag was used to create `A`, you must provide it to `unhankel`
+- `N`: length of the original signal
+- `D`: dimension of the original signal
+"""
 function unhankel(A,lag,N,D=1)
     lag == 1 && D == 1 && (return unhankel(A))
     K      = size(A,1)
@@ -69,9 +85,6 @@ function hankel(x,L,lag=1)
     end
     X
 end
-
-
-
 
 function ishankel(A)
     K,L = size(A)
