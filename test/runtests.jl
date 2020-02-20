@@ -271,6 +271,25 @@ end
     yf = lowrankfilter(y+n)
     @test mean(abs2, y-yf)/mean(abs2, n) < 0.001
 
+
+    @testset "Multi channel" begin
+        @info "Testing Multi channel"
+
+        T = 1000
+        t = 1:T
+        y1 = sin.(0.1 .* t)
+        y2 = sin.(0.3 .* t)
+        y = [y1 y2+0.5y1]
+        yn = y .+ 0.1 .* randn.() .+ (rand.() .< 0.01) .* 5 .* randn.()
+        yf = lowrankfilter(yn, 20)
+        @show mean(abs2,y-yf)/mean(abs2,y-yn)
+        @test mean(abs2,y-yf)/mean(abs2,y-yn) < 0.05
+
+        # There shoud be benefit to joint filtering since the two signals are correlated
+        yf1 = lowrankfilter(yn[:,1], 20)
+        mean(abs2,y1-yf1)/mean(abs2,y1-yf[:,1]) > 1.02
+    end
+
 end
 
 @testset "rpca_ga" begin

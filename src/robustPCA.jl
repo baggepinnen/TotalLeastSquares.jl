@@ -114,7 +114,7 @@ Filter time series `y` by forming a lag-embedding T (a Toeplitz matrix) and usin
 function lowrankfilter(y, n=min(size(y,1)÷20,2000); lag=1, tol=1e-3, kwargs...)
     H = hankel(y, n, lag)
     A,E = rpca(H; tol=tol, kwargs...)
-    unhankel(A, lag, length(y), size(y,2))
+    unhankel(A, lag, size(y,1), size(y,2))
 end
 
 
