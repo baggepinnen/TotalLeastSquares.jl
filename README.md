@@ -5,10 +5,11 @@
 
 # TotalLeastSquares.jl
 
-Solve (weighted) total least-squares problems
+Solve (weighted or robust) total least-squares problems, impute missing data and robustly filter time series.
 
 These functions are exported:
 
+#### Estimation
 - `x = tls(A,y)`
   Solves the standard TLS problem using the SVD method. An inplace version `tls!(Ay, n)` also exists, for this you need to supply `Ay = [A y]` and the width of `A`, `n = size(A,2)`.
 - `x = wtls(A,y,Qaa,Qay,Qyy,iters=10)`
@@ -18,9 +19,11 @@ These functions are exported:
   Takes row-wise covariance matrices `QAy[i]` and returns the full (sparse) covariance matrices. `rowQ = [cov([A[i,:] y[i]]) for i = 1:length(y)]`
 - `x = wls(A,y,Qyy)` Solves the weighted standard LS problem. `Qyy` is the covariance matrix of the residuals with side length equal to the length of `y`.
 - `x = rtls(A,y)` Solves a robust TLS problem. Both `A` and `y` are assumed to be corrupted with high magnitude, but sparse, noise. See analysis below.
+#### Matrix recovery
 - `Â, Ê, s, sv = rpca(D; kwargs...)` robust matrix recovery using robust PCA. Solves `minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E`
-- `Q = rpca_ga(X, r; kwargs...)` robust PCA using Grassmann averages. Returns the pricipal components up to rank `r`.
-- `yf = lowrankfilter(y, n; kwargs...)` Filter time series `y` by forming a lag-embedding T (a Toeplitz matrix) and using [`rpca`](@ref) to recover a low-rank matrix from which the a filtered signal `yf` can be extracted. Robustly filters large sparse outliers.
+- `Q = rpca_ga(X, r; kwargs...)` robust PCA using Grassmann averages. Returns the principal components up to rank `r`.
+#### Time-series filtering
+- `yf = lowrankfilter(y, n; kwargs...)` Filter time series `y` by forming a lag-embedding H (a Hankel matrix) and using [`rpca`](@ref) to recover a low-rank matrix from which the a filtered signal `yf` can be extracted. Robustly filters large sparse outliers.
 
 ## Example
 ```julia
