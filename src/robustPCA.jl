@@ -57,7 +57,7 @@ function unhankel(A,lag,N,D=1)
         y[yind] += A[Aind]
         counts[yind] += 1
     end
-    y ./= counts
+    y ./= max.(counts, 1)
     D == 1 && (return vec(y))
     y
 end
@@ -111,9 +111,14 @@ Filter time series `y` by forming a lag-embedding T (a Toeplitz matrix) and usin
 - `n`: Embedding size
 - `kwargs`: See [`rpca`](@ref) for keyword arguments.
 """
-function lowrankfilter(y, n=min(size(y,1)÷20,2000); lag=1, tol=1e-3, kwargs...)
+function lowrankfilter(y, n=min(size(y,1)÷20,2000); sv=0, lag=1, tol=1e-3, kwargs...)
     H = hankel(y, n, lag)
-    A,E = rpca(H; tol=tol, kwargs...)
+    if sv <= 0
+        A,E = rpca(H; tol=tol, kwargs...)
+    else
+        s = svd(H)
+        A = s.U[:,1:sv] * Diagonal(s.S[1:sv]) * s.Vt[1:sv,:]
+    end
     unhankel(A, lag, size(y,1), size(y,2))
 end
 
@@ -139,6 +144,8 @@ Significant inspiration taken from an early implementation by Ryuichi Yamamoto i
 - `nonnegE`: Hard thresholding on E
 - `nukeA`: Activate the nuclear penalty on `A`, if `false`, then `A` is not assumed to be low rank.
 - `hankel`: Indicating whether or not `D` (and thus `A` and `E`) are Hankel matrices (constant anti diagonals). If this fact is known, the expected performance of this alogorithm goes up. If the matrix `D` is Toeplitz (constant diagonals) you may reverse the second dimension, i.e., `Dᵣ = D[:,end:-1:1]`. `hankel=true` should likely be paired with `nukeA=false`.
+
+To speed up convergence you may either increase the tolerance or increase `ρ`. Increasing `tol` is often the best solution.
 """
 function rpca(D::AbstractMatrix{T};
                           λ              = T(1.0/sqrt(maximum(size(D)))),
