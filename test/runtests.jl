@@ -91,6 +91,20 @@ Random.seed!(0)
 
         end
 
+        @testset "Complex" begin
+            @info "Testing Complex"
+            u = randn(ComplexF64, 100)
+            v = randn(ComplexF64, 20)
+            E = randn(ComplexF64,100,20) .* 10 .* (rand.() .< 0.01)
+            A = u*v'
+            D = A .+ E
+            Ah, Eh, s, sv = rpca(D)
+            @test sum(abs2, Eh-E)/sum(abs2, E) < 1e-5
+            @test sum(abs2, Ah-A)/sum(abs2, A) < 1e-5
+
+
+        end
+
     end
 
 @testset "rtls" begin

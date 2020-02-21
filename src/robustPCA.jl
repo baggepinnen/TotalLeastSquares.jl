@@ -1,5 +1,10 @@
 @inline soft_th(x, ϵ) = max(x-ϵ,zero(x)) + min(x+ϵ,zero(x))
 @inline soft_th(x, ϵ, l) = max(x-ϵ,l) + min(x+ϵ,l) - l
+@inline function soft_th(x::Complex, ϵ)
+    m,a = abs(x), angle(x)
+    m = max(m-ϵ,zero(m)) + min(m+ϵ,zero(m))
+    m*cis(a)
+end
 
 function soft_hankel!(A, ϵ)
     K,L = size(A)
@@ -148,29 +153,29 @@ Significant inspiration taken from an early implementation by Ryuichi Yamamoto i
 To speed up convergence you may either increase the tolerance or increase `ρ`. Increasing `tol` is often the best solution.
 """
 function rpca(D::AbstractMatrix{T};
-                          λ              = T(1.0/sqrt(maximum(size(D)))),
+                          λ              = real(T)(1.0/sqrt(maximum(size(D)))),
                           iters::Int     = 1000,
-                          tol            = sqrt(eps(T)),
-                          ρ              = T(1.5),
+                          tol            = sqrt(eps(real(T))),
+                          ρ              = real(T)(1.5),
                           verbose::Bool  = false,
                           nonnegA::Bool  = false,
                           nonnegE::Bool  = false,
                           hankel::Bool   = false,
                           # proxE          = NormL1(λ),
                           nukeA          = true) where T
-
+    RT        = real(T)
     M, N      = size(D)
     d         = min(M,N)
     A, E      = zeros(T, M, N), zeros(T, M, N)
     Z         = similar(D)
     Y         = copy(D)
-    norm²     = opnorm(Y)::T # can be tuned
+    norm²     = opnorm(Y)::RT # can be tuned
     norm∞     = norm(Y, Inf) / λ
     dual_norm = max(norm², norm∞)
     d_norm    = norm²
     Y       ./= dual_norm
-    μ         = T(1.25) / norm²
-    μ̄         = μ  * T(1.0e+7)
+    μ         = RT(1.25) / norm²
+    μ̄         = μ  * RT(1.0e+7)
     sv        = 10
     local s, svp
     for k = 1:iters
