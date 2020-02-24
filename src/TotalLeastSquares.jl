@@ -1,5 +1,5 @@
 module TotalLeastSquares
-export tls, tls!, wtls, wls, rtls, rowcovariance, hankel, ishankel, unhankel
+export tls, tls!, wtls, wls, rtls, irls, rowcovariance, hankel, ishankel, unhankel
 export rpca, lowrankfilter, rpca_ga, entrywise_median, entrywise_trimmed_mean, μ!
 using FillArrays, Printf, LinearAlgebra, SparseArrays, Statistics
 
@@ -144,5 +144,48 @@ end
 #     V22 = V[n+1:end,n+1:end]
 #     x   = -V21/V22
 # end
+
+"""
+    irls(A, y; tolx=0.001, tol=1.0e-6, verbose=false, iters=100)
+
+Iteratively reweighted least squares. Solves
+minimizeₓ ||Ax-y||₁
+
+#Arguments:
+- `A`: Design matrix
+- `y`: Measurements
+- `tolx`: Minimum change in `x` before quitting
+- `tol`: Minimum change in error before quitting
+- `iters`: Maximum number of iterations
+"""
+function irls(A,y; tolx=1e-4, tol=1e-6, verbose=false, iters=100)
+    x = A\y
+    w = similar(y)
+    mul!(w,A,x) # w used for storage
+    xold = copy(x)
+    e = abs.(y - w)
+    me = median(e)
+    meold = me
+    verbose && println("0: Error: ", round(me, sigdigits=3))
+    w .= max.(e, 1e-5)
+    for i = 1:iters
+        x = wls(A,y,Diagonal(w))
+        mul!(w,A,x) # w used for storage
+        e .= abs.(y .- w)
+        e .= abs.(e)
+        w .= max.(e, 1e-5)
+        d = norm(x-xold)/norm(x)
+        me = median(e)
+        verbose && println("$i: Error: ", round(me, sigdigits=3), " relative step: ", round(d, sigdigits=3))
+        if d < tolx || meold-me < tol
+            verbose && println("Success")
+            return x
+        end
+        meold = me
+        xold .= x
+    end
+    verbose && println("Maximum number of iterations reached")
+    x
+end
 
 end # module

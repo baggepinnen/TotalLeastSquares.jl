@@ -284,6 +284,7 @@ end
     n = 20randn(T) .* (rand(T) .< 0.01) + 0.1randn(T)
     yf = lowrankfilter(y+n)
     @test mean(abs2, y-yf)/mean(abs2, n) < 0.001
+    @show mean(abs2, y-yf)/mean(abs2, n)
 
 
     @testset "Multi channel" begin
@@ -388,6 +389,21 @@ end
         @show mean(passes)
         @test mean(passes) > 0.9
     end
+end
+
+@testset "irls" begin
+    @info "Testing irls"
+
+    N = 10000
+    n = 20
+    A = randn(N, n)
+    x = randn(n)
+    y = A*x
+    e = 100*(rand(N) .< 0.01) + 0.1randn(N)
+    @time xh = irls(A,y+e, verbose=true,iters=100)
+    @test norm(x-xh)/norm(x) < 0.01
+    xhls = A\(y+e)
+    @test norm(x-xh) < norm(x-xhls)
 end
 
 end
