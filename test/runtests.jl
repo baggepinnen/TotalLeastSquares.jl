@@ -83,11 +83,10 @@ Random.seed!(0)
                 y = sin.(0.1 .* (1:N)) .+ 0.1*randn(N)
                 miss = rand(N) .< 0.1
                 yn = y .+ miss .* 1e2
-                miss = findall(miss)
                 yf = lowrankfilter(yn,40)
                 mean(abs2,y-yf)/mean(abs2,y)
             end
-            mean(res) < 0.025
+            @test mean(res) < 0.025
 
         end
 
