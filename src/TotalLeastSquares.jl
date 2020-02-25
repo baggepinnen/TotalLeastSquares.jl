@@ -16,6 +16,12 @@ function wls(A,y,Σ)
     (A'*(Σ\A))\A'*(Σ\y)
 end
 
+function wls!(zA,A,y,w)
+    zA .= A ./ w
+    w  .= y ./ w
+    (A'*zA)\A'w
+end
+
 wls(A,y,Σ::Union{Matrix, SparseMatrixCSC}) = wls(A,y,factorize(Hermitian(Σ)))
 
 """
@@ -160,6 +166,7 @@ minimizeₓ ||Ax-y||₁
 """
 function irls(A,y; tolx=1e-4, tol=1e-6, verbose=false, iters=100)
     x = A\y
+    zA = similar(A)
     w = similar(y)
     mul!(w,A,x) # w used for storage
     xold = copy(x)
@@ -169,10 +176,9 @@ function irls(A,y; tolx=1e-4, tol=1e-6, verbose=false, iters=100)
     verbose && println("0: Error: ", round(me, sigdigits=3))
     w .= max.(e, 1e-5)
     for i = 1:iters
-        x = wls(A,y,Diagonal(w))
+        x = wls!(zA,A,y,w)
         mul!(w,A,x) # w used for storage
         e .= abs.(y .- w)
-        e .= abs.(e)
         w .= max.(e, 1e-5)
         d = norm(x-xold)/norm(x)
         me = median(e)
