@@ -16,6 +16,13 @@ function wls(A,y,Σ)
     (A'*(Σ\A))\A'*(Σ\y)
 end
 
+
+"""
+    wls!(zA, A, y, w::Vector)
+
+Overwrites `zA` *and* `w`.
+- `zA`: storage of same size as `A`
+"""
 function wls!(zA,A,y,w)
     zA .= A ./ w
     w  .= y ./ w
