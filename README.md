@@ -23,7 +23,7 @@ These functions are exported:
 
 
 #### Matrix recovery
-- `Â, Ê, s, sv = rpca(D; kwargs...)` robust matrix recovery using robust PCA. Solves `minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E`
+- `Â, Ê, s, sv = rpca(D; kwargs...)` robust matrix recovery using robust PCA. Solves `minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E`. Optionally force `A` or `E` to be non-negative.
 - `Q = rpca_ga(X, r; kwargs...)` robust PCA using Grassmann averages. Returns the principal components up to rank `r`.
 #### Time-series filtering
 - `yf = lowrankfilter(y, n; kwargs...)` Filter time series `y` by forming a lag-embedding H (a Hankel matrix) and using [`rpca`](@ref) to recover a low-rank matrix from which the a filtered signal `yf` can be extracted. Robustly filters large sparse outliers.
