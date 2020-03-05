@@ -59,7 +59,7 @@ println("----------------------------")
 ```
 ```julia
 Least squares error:                 3.753e-01  2.530e-01 -3.637e-01, Norm:  5.806e-01
-Weigthed Least squares error:        3.753e-01  2.530e-01 -3.637e-01, Norm:  5.806e-01
+Weighted Least squares error:        3.753e-01  2.530e-01 -3.637e-01, Norm:  5.806e-01
 Total Least squares error:           2.897e-01  1.062e-01 -2.976e-01, Norm:  4.287e-01
 Weighted Total Least squares error:  1.213e-01 -1.933e-01 -9.527e-02, Norm:  2.473e-01
 ----------------------------
