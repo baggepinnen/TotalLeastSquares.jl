@@ -423,22 +423,30 @@ end
 @testset "sls" begin
     @info "Testing sls"
 
+    for i = 1:100
+        x = TotalLeastSquares.proj_simplex!(randn(i))
+        @test sum(x) ≈ 1
+        @test all(x .>= 0)
+    end
+
+
     s1(x) = x ./= sum(x)
     ##
     n = 10
     N = 2
-    a = [(rand(n)) for _ in 1:N]
-    A = reduce(hcat,a)
-    x = s1(rand(N))
-    y = A*x
-    yn = y .+ 0.1.*randn.()
-    xh1 = TotalLeastSquares.proj_simplex!(A\yn)
-    @show norm(x-xh1)
+    results = map(1:100) do _
+        a = [(rand(n)) for _ in 1:N]
+        A = reduce(hcat,a)
+        x = s1(rand(N))
+        y = A*x
+        yn = y .+ 0.01.*randn.()
+        xh1 = TotalLeastSquares.proj_simplex!(A\yn)
 
-    xh2 = TotalLeastSquares.sls(A,yn,verbose=false)
-    @show norm(x-xh2)
-    @test sum(xh2) ≈ 1
+        xh2 = sls(A,yn,verbose=false)
+        @test sum(xh2) ≈ 1
 
-    @test norm(x-xh2) < norm(x-xh1) || norm(yn-A*xh2) < norm(yn-A*xh1)
+        norm(x-xh2) < norm(x-xh1) || norm(yn-A*xh2) < norm(yn-A*xh1)
+    end
+    @test mean(results) >= 0.98
 end
 end
