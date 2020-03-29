@@ -420,4 +420,25 @@ end
     @test norm(x-xh) < norm(x-xhls)
 end
 
+@testset "sls" begin
+    @info "Testing sls"
+
+    s1(x) = x ./= sum(x)
+    ##
+    n = 10
+    N = 2
+    a = [(rand(n)) for _ in 1:N]
+    A = reduce(hcat,a)
+    x = s1(rand(N))
+    y = A*x
+    yn = y .+ 0.1.*randn.()
+    xh1 = TotalLeastSquares.proj_simplex!(A\yn)
+    @show norm(x-xh1)
+
+    xh2 = TotalLeastSquares.sls(A,yn,verbose=false)
+    @show norm(x-xh2)
+    @test sum(xh2) ≈ 1
+
+    @test norm(x-xh2) < norm(x-xh1) || norm(yn-A*xh2) < norm(yn-A*xh1)
+end
 end

@@ -1,5 +1,5 @@
 module TotalLeastSquares
-export tls, tls!, wtls, wls, rtls, irls, rowcovariance, hankel, ishankel, unhankel
+export tls, tls!, wtls, wls, rtls, irls, sls, rowcovariance, hankel, ishankel, unhankel
 export rpca, lowrankfilter, rpca_ga, entrywise_median, entrywise_trimmed_mean, μ!
 using FillArrays, Printf, LinearAlgebra, SparseArrays, Statistics
 
@@ -200,5 +200,65 @@ function irls(A,y; tolx=1e-4, tol=1e-6, verbose=false, iters=100)
     verbose && println("Maximum number of iterations reached")
     x
 end
+
+
+"""
+    sls(A, y; r = 1, iters = 100, verbose = false, tol = 1.0e-8)
+
+Simplex least-squares: minimizeₓ ||Ax-y||₂ s.t. sum(x) = r
+
+# Arguments:
+- `A`: Design matrix
+- `y`: RHS
+- `r`: Simplex radius. the default (1) is the probability simplex.
+- `iters`: Maximum number of iterations of projected gradient
+- `verbose`: Print stuff
+- `tol`: Tolerance (change in x between iterations).
+"""
+function sls(A, y; r=1, iters=100, verbose=false, tol=1e-8)
+
+    α0 = 0.1
+    x = A\y
+    proj_simplex!(x; r=r)
+    xo = copy(x)
+    g = similar(x)
+    e = similar(y)
+    local ng, step
+    step = 0.0
+    verbose && @info "Iter 0 cost: $(norm(A*x-y))"
+    for iter = 1:iters
+        mul!(e,A,x)
+        e .= y .- e
+        mul!(g, A', e)
+        ng = norm(g)
+        α = α0 / sqrt(iter)
+        x .+= α .* g
+        proj_simplex!(x; r=r)
+        step = sqrt(sum(abs2(x-xo) for (x,xo) in zip(x,xo)))
+        verbose && @info "Iter $iter norm(g): $ng norm(x-xo): $step, cost: $(norm(e))"
+        step < tol && break
+        xo .= x
+
+    end
+    verbose &&  @info "Converged - cost function: $(norm(e))"
+    x
+end
+
+"""
+    proj_simplex!(x; iters = 1000, r = 1, tol = 1.0e-8)
+
+Project x onto the simplex with radius `r` such that `sum(x) = r` and all `x >= 0`
+"""
+function proj_simplex!(x; iters=1000, r=1, tol=1e-8)
+    μ = minimum(x) - r
+    for iter = 1:iters
+        cost = sum(max(x - μ, 0)  for x in x) - r
+        df   = sum(-((x - μ) > 0) for x in x)
+        μ   -= cost / df
+        abs(cost) < tol && break
+    end
+    @. x = max(x - μ, 0)
+end
+
 
 end # module
