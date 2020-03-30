@@ -203,7 +203,7 @@ end
 
 
 """
-    sls(A, y; r = 1, iters = 100, verbose = false, tol = 1.0e-8)
+    sls(A, y; r = 1, iters = 100, verbose = false, tol = 1.0e-8, α0 = 0.1)
 
 Simplex least-squares: minimizeₓ ||Ax-y||₂ s.t. sum(x) = r
 
@@ -214,17 +214,15 @@ Simplex least-squares: minimizeₓ ||Ax-y||₂ s.t. sum(x) = r
 - `iters`: Maximum number of iterations of projected gradient
 - `verbose`: Print stuff
 - `tol`: Tolerance (change in x between iterations).
+- `α0`: initial step size. This parameter influences speed of convergence and also to which point the algorithm converges.
 """
-function sls(A, y; r=1, iters=100, verbose=false, tol=1e-8)
+function sls(A, y; r=1, iters=100, verbose=false, tol=1e-8, α0 = 0.1)
 
-    α0 = 0.1
     x = A\y
     proj_simplex!(x; r=r)
     xo = copy(x)
     g = similar(x)
     e = similar(y)
-    local ng, step
-    step = 0.0
     verbose && @info "Iter 0 cost: $(norm(A*x-y))"
     for iter = 1:iters
         mul!(e,A,x)
