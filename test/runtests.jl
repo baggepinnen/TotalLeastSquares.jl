@@ -366,7 +366,7 @@ end
         w = ones(10)
         m2 = TotalLeastSquares.entrywise_trimmed_mean(s,w,U,0.1)
         for i in eachindex(m2)
-            @test m2[i] == mean(StatsBase.trim(U[i,:], prop=0.1))
+            @test m2[i] ≈ mean(StatsBase.trim(U[i,:], prop=0.1))
         end
 
         r = 3; ϵ = 1e-8
