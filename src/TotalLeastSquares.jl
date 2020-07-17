@@ -13,7 +13,7 @@ Solves the weigted standard least-squares problem Ax = y + e, e ~ N(0,Σ)
 - `Σ ∈ R(n,n)` Covariance matrix of the residuals (can be sparse or already factorized).
 """
 function wls(A,y,Σ)
-    (A'*(Σ\A))\A'*(Σ\y)
+    Symmetric(A'*(Σ\A))\(A'*(Σ\y))
 end
 
 
@@ -26,7 +26,7 @@ Overwrites `zA` *and* `w`.
 function wls!(zA,A,y,w)
     zA .= A ./ w
     w  .= y ./ w
-    (A'*zA)\A'w
+    Symmetric(A'*zA)\(A'w)
 end
 
 wls(A,y,Σ::Union{Matrix, SparseMatrixCSC}) = wls(A,y,factorize(Hermitian(Σ)))
