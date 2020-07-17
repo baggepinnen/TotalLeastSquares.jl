@@ -287,10 +287,10 @@ end
     @test mean(abs2, y-yf)/mean(abs2, n) < 0.001
     @show mean(abs2, y-yf)/mean(abs2, n)
 
+    # Randomized lin alg
     yf = lowrankfilter(y+n, opnorm=x->rnorm(x,10)) |> qn
     @test mean(abs2, y-yf)/mean(abs2, n) < 0.001
     @show mean(abs2, y-yf)/mean(abs2, n)
-
 
     yf = lowrankfilter(y+n, svd=rsvd_fnkz) |> qn
     @test mean(abs2, y-yf)/mean(abs2, n) < 0.05
@@ -300,8 +300,14 @@ end
     @test mean(abs2, y-yf)/mean(abs2, n) < 0.05
     @show mean(abs2, y-yf)/mean(abs2, n)
 
-
     yf = lowrankfilter(y+n, opnorm=x->rnorm(x,10), svd=rsvd_fnkz, maxrank=5) |> qn
+    @test mean(abs2, y-yf)/mean(abs2, n) < 0.05
+    @show mean(abs2, y-yf)/mean(abs2, n)
+
+
+    # Only SSA
+    n = randn(T)
+    yf = lowrankfilter(y+n, sv=2) |> qn
     @test mean(abs2, y-yf)/mean(abs2, n) < 0.05
     @show mean(abs2, y-yf)/mean(abs2, n)
 
