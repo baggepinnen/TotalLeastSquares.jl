@@ -104,6 +104,15 @@ The matrix `E` contains the estimated outliers
 vec(E)'vec(miss)/(norm(E)*norm(miss)) # These should correlate if all missing values were identified
 # 1.00
 ```
+
+## Speeding up robust factorization
+The function `rpca` internally performs several SVDs, which make up the bulk of the computation time. In order to speed this up, you may provide a custom `svd` function. An example using a randomized method from [RandomizedLinAlg.jl](https://haampie.github.io/RandomizedLinAlg.jl/latest/index.html#RandomizedLinAlg.rsvd):
+```julia
+lowrankfilter(xn, L, svd = rsvd, opnorm=x->rnorm(x,10)) # The same keywords are accepted by rpca
+```
+here, we provide both a randomized svd function as well as one for calculating the operator norm, which also takes a long time.
+
+
 # Notes
 This package was developed for the thesis  
 [Bagge Carlson, F.](https://www.control.lth.se/staff/fredrik-bagge-carlson/), ["Machine Learning and System Identification for Estimation in Physical Systems"](https://lup.lub.lu.se/search/publication/ffb8dc85-ce12-4f75-8f2b-0881e492f6c0) (PhD Thesis 2018).
