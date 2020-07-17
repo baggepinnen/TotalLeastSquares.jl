@@ -109,9 +109,11 @@ vec(E)'vec(miss)/(norm(E)*norm(miss)) # These should correlate if all missing va
 The function `rpca` internally performs several SVDs, which make up the bulk of the computation time. In order to speed this up, you may provide a custom `svd` function. An example using a randomized method from [RandomizedLinAlg.jl](https://haampie.github.io/RandomizedLinAlg.jl/latest/index.html#RandomizedLinAlg.rsvd):
 ```julia
 using TotalLeastSquares, RandomizedLinAlg
-lowrankfilter(x, L, svd = rsvd, opnorm=x->rnorm(x,10)) # The same keywords are accepted by rpca
+lowrankfilter(x, L, svd = rsvd_fnkz, opnorm=x->rnorm(x,10)) # The same keywords are accepted by rpca
 ```
-here, we provide both a randomized svd function as well as one for calculating the operator norm, which also takes a long time.
+here, we provide both a randomized svd function as well as one for calculating the operator norm, which also takes a long time. Other alternative svd functions to consider are
+- `RandomizedLinAlg.rsvd`
+- `TSVD.tsvd`
 
 
 # Notes
