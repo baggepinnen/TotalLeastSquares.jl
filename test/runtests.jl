@@ -1,4 +1,5 @@
 using Random, Statistics, LinearAlgebra, Test, FillArrays, Printf, TotalLeastSquares, StatsBase
+using RandomizedLinAlg
 Random.seed!(0)
 
 
@@ -259,9 +260,10 @@ end
 
 @testset "lowrankfilter" begin
     @info "Testing lowrankfilter"
+    qn(x) = x ./ quantile(abs.(x), 0.9)
     T = 1000
     t = 1:T
-    y = sin.(0.1 .* t)
+    y = sin.(0.1 .* t) |> qn
 
     H = hankel(y, 2)
     @test ishankel(H)
@@ -281,8 +283,32 @@ end
     @test yh[1:end-1,:] ≈ [y y2][1:end-1,:]
 
     n = 20randn(T) .* (rand(T) .< 0.01) + 0.1randn(T)
-    yf = lowrankfilter(y+n)
+    yf = lowrankfilter(y+n) |> qn
     @test mean(abs2, y-yf)/mean(abs2, n) < 0.001
+    @show mean(abs2, y-yf)/mean(abs2, n)
+
+    # Randomized lin alg
+    yf = lowrankfilter(y+n, opnorm=x->rnorm(x,10)) |> qn
+    @test mean(abs2, y-yf)/mean(abs2, n) < 0.001
+    @show mean(abs2, y-yf)/mean(abs2, n)
+
+    yf = lowrankfilter(y+n, svd=rsvd_fnkz) |> qn
+    @test mean(abs2, y-yf)/mean(abs2, n) < 0.05
+    @show mean(abs2, y-yf)/mean(abs2, n)
+
+    yf = lowrankfilter(y+n, opnorm=x->rnorm(x,10), svd=rsvd_fnkz) |> qn
+    @test mean(abs2, y-yf)/mean(abs2, n) < 0.05
+    @show mean(abs2, y-yf)/mean(abs2, n)
+
+    yf = lowrankfilter(y+n, opnorm=x->rnorm(x,10), svd=rsvd_fnkz, maxrank=5) |> qn
+    @test mean(abs2, y-yf)/mean(abs2, n) < 0.05
+    @show mean(abs2, y-yf)/mean(abs2, n)
+
+
+    # Only SSA
+    n = randn(T)
+    yf = lowrankfilter(y+n, sv=2) |> qn
+    @test mean(abs2, y-yf)/mean(abs2, n) < 0.05
     @show mean(abs2, y-yf)/mean(abs2, n)
 
 

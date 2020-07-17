@@ -82,20 +82,20 @@ The results indicate that the robust method is to be preferred when the noise is
 ## Missing data imputation
 The robust methods handle missing data the same way as they handle outliers. You may indicate that an entry is missing simply by setting it to a very large value, e.g.,
 ```julia
-N = 500
-y = sin.(0.1 .* (1:N)) # Sinus
-miss = rand(N) .< 0.1  # 10% missing values
-yn = y .+ miss .* 1e2 .+ 0.1*randn(N)   # Set missing values to very large number and add noise
-yf = lowrankfilter(yn,40)    # Filter
+N    = 500
+y    = sin.(0.1 .* (1:N))   # Sinus
+miss = rand(N) .< 0.1       # 10% missing values
+yn   = y .+ miss .* 1e2 .+ 0.1*randn(N) # Set missing values to very large number and add noise
+yf   = lowrankfilter(yn,40) # Filter
 mean(abs2,y-yf)/mean(abs2,y) # Normalized error
 # 0.001500 # Less than 1 percent error in the recovery of y
 ```
 To impute missing data in a matrix, we make use of `rpca`:
 ```julia
-H = hankel(sin.(0.1 .* (1:N)), 5)  # A low-rank matrix
-miss = rand(size(H)...) .< 0.1     # 10% missing values
-Hn = H .+ 0.1randn(size(H)) .+ miss .* 1e2    # Set missing values to very large number
-Ĥ, E = rpca(Hn)
+H     = hankel(sin.(0.1 .* (1:N)), 5)         # A low-rank matrix
+miss  = rand(size(H)...) .< 0.1               # 10% missing values
+Hn    = H .+ 0.1randn(size(H)) .+ miss .* 1e2 # Set missing values to very large number
+Ĥ, E  = rpca(Hn)
 mean(abs2,H-Ĥ)/mean(abs2,H) # Normalized error
 # 0.06 # Six percent error in the recovery of H
 ```
@@ -104,6 +104,18 @@ The matrix `E` contains the estimated outliers
 vec(E)'vec(miss)/(norm(E)*norm(miss)) # These should correlate if all missing values were identified
 # 1.00
 ```
+
+## Speeding up robust factorization
+The function `rpca` internally performs several SVDs, which make up the bulk of the computation time. In order to speed this up, you may provide a custom `svd` function. An example using a randomized method from [RandomizedLinAlg.jl](https://haampie.github.io/RandomizedLinAlg.jl/latest/index.html#RandomizedLinAlg.rsvd):
+```julia
+using TotalLeastSquares, RandomizedLinAlg
+lowrankfilter(x, L, svd = rsvd_fnkz, opnorm=x->rnorm(x,10)) # The same keywords are accepted by rpca
+```
+here, we provide both a randomized svd function as well as one for calculating the operator norm, which also takes a long time. Other alternative svd functions to consider are
+- `RandomizedLinAlg.rsvd`
+- `TSVD.tsvd`
+
+
 # Notes
 This package was developed for the thesis  
 [Bagge Carlson, F.](https://www.control.lth.se/staff/fredrik-bagge-carlson/), ["Machine Learning and System Identification for Estimation in Physical Systems"](https://lup.lub.lu.se/search/publication/ffb8dc85-ce12-4f75-8f2b-0881e492f6c0) (PhD Thesis 2018).

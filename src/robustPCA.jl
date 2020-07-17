@@ -116,10 +116,10 @@ Filter time series `y` by forming a lag-embedding T (a Toeplitz matrix) and usin
 - `n`: Embedding size
 - `kwargs`: See [`rpca`](@ref) for keyword arguments.
 """
-function lowrankfilter(y, n=min(size(y,1)÷20,2000); sv=0, lag=1, tol=1e-3, kwargs...)
+function lowrankfilter(y, n=min(size(y,1)÷20,2000); sv=0, lag=1, tol=1e-3, svd = svd!, kwargs...) where {F <: Function}
     H = hankel(y, n, lag)
     if sv <= 0
-        A,E = rpca(H; tol=tol, kwargs...)
+        A,E = rpca(H; tol=tol, svd = svd, kwargs...)
     else
         s = svd(H)
         A = s.U[:,1:sv] * Diagonal(s.S[1:sv]) * s.Vt[1:sv,:]
@@ -141,6 +141,7 @@ Significant inspiration taken from an early implementation by Ryuichi Yamamoto i
 #Arguments:
 - `D`: Design matrix
 - `λ`: Sparsity regularization
+- `maxrank`: Upper limit on the rank of the estimated matrix. Setting a smaller value makes convergence faster.
 - `iters`: Maximum number of iterations
 - `tol`: Tolerance
 - `ρ`: Algorithm tuning param
@@ -154,6 +155,7 @@ To speed up convergence you may either increase the tolerance or increase `ρ`. 
 """
 function rpca(D::AbstractMatrix{T};
                           λ              = real(T)(1.0/sqrt(maximum(size(D)))),
+                          maxrank        = typemax(Int),
                           iters::Int     = 1000,
                           tol            = sqrt(eps(real(T))),
                           ρ              = real(T)(1.5),
@@ -162,47 +164,52 @@ function rpca(D::AbstractMatrix{T};
                           nonnegE::Bool  = false,
                           hankel::Bool   = false,
                           # proxE          = NormL1(λ),
-                          nukeA          = true) where T
+                          nukeA          = true,
+                          svd::F1        = svd!,
+                          opnorm::F2     = opnorm,
+                          kwargs...) where {F1 <: Function, F2 <: Function, T}
     RT        = real(T)
     M, N      = size(D)
     d         = min(M,N)
     A, E      = zeros(T, M, N), zeros(T, M, N)
     Z         = similar(D)
     Y         = copy(D)
-    norm²     = opnorm(Y)::RT # can be tuned
+    norm²     = opnorm(Y)::RT # can be tuned # norm(Y)/minimum(size(D))^(2/5)
     norm∞     = norm(Y, Inf) / λ
     dual_norm = max(norm², norm∞)
     d_norm    = norm²
     Y       ./= dual_norm
-    μ         = RT(1.25) / norm²
-    μ̄         = μ  * RT(1.0e+7)
-    sv        = 10
-    local s, svp
+    μ         = RT(1.25 / norm²)
+    μ̄         = RT(μ * 1.0e+7)
+    sv = svp  = 10
+    local s
     for k = 1:iters
         # prox!(E, proxE, D .- A .+ (1/μ) .* Y, 1/μ)
         E .= soft_th.(D .- A .+ (1/μ) .* Y, λ/μ)
-        if hankel
-            soft_hankel!(E, λ/μ)
-        end
         if nonnegE
             E .= max.(E, 0)
         end
-        s = svd!(Z .= D .- E .+ (1/μ) .* Y) # Z assignment just for storage
+        Z .= D .- E .+ (1/μ) .* Y
+        if svd ∈ (LinearAlgebra.svd, LinearAlgebra.svd!) || k == 1
+            s = LinearAlgebra.svd!(Z) # Z assignment just for storage
+        else
+            s = svd(Z, sv)
+        end
         svp = sum(x-> x >= (1/μ), s.S)::Int
         if svp < sv
-            sv = svp # min(svp + 1, N) # the paper says to use these formulas but sv=svp works way better
+            sv = svp#min(svp + 1, N) # the paper says to use these formulas but sv=svp works way better
         else
-            sv = svp # min(svp + round(Int, T(0.05) * d), d)
+            sv = svp#min(svp + round(Int, T(0.05) * d), d)
         end
-
+        sv = clamp(sv, 1, maxrank)
         @views if nukeA
-            # A .= s.U[:,1:sv] * Diagonal(s.S[1:sv] .- 1/μ) * s.Vt[1:sv,:]
-            mul!(Z[:,1:sv], s.U[:,1:sv], Diagonal(s.S[1:sv] .- 1/μ))
-            mul!(A, Z[:,1:sv], s.Vt[1:sv,:])
+            # A .= s.U[:,1:svp] * Diagonal(s.S[1:svp] .- 1/μ) * s.Vt[1:svp,:]
+            mul!(Z[:,1:svp], s.U[:,1:svp], Diagonal(s.S[1:svp] .- 1/μ))
+            mul!(A, Z[:,1:svp], s.Vt[1:svp,:])
         else
-            # A .= s.U[:,1:sv] * Diagonal(s.S[1:sv]) * s.Vt[1:sv,:]
-            mul!(Z[:,1:sv], s.U[:,1:sv], Diagonal(s.S[1:sv]))
-            mul!(A, Z[:,1:sv], s.Vt[1:sv,:])
+            # A .= s.U[:,1:svp] * Diagonal(s.S[1:svp]) * s.Vt[1:svp,:]
+            mul!(Z[:,1:svp], s.U[:,1:svp], Diagonal(s.S[1:svp]))
+            mul!(A, Z[:,1:svp], s.Vt[1:svp,:])
         end
         if hankel
             soft_hankel!(A, λ/μ)
@@ -213,7 +220,7 @@ function rpca(D::AbstractMatrix{T};
 
         @. Z = D - A - E # Z are the reconstruction errors
         @. Y = Y + μ * Z # Y can not be moved below as it depends on μ which is changed below
-        μ = min(μ*ρ, μ̄)
+        μ = RT(min(μ*ρ, μ̄))
 
         cost = opnorm(Z) / d_norm
         verbose && println("$(k) cost: $(round(cost, sigdigits=4))")
@@ -223,6 +230,9 @@ function rpca(D::AbstractMatrix{T};
             break
         end
         k == iters && @warn "Maximum number of iterations reached, cost: $cost, tol: $tol"
+    end
+    if hankel
+        soft_hankel!(E, λ/μ)
     end
 
     A, E, s, sv
@@ -236,7 +246,7 @@ http://www2.compute.dtu.dk/~sohau/papers/cvpr2014a/Hauberg_CVPR_2014.pdf
 
 #Arguments:
 - `X`: Data matrix
-- `r`: Rank (number of components to estimate
+- `r`: Rank (number of components to estimate)
 - `U`: Optional pre-allocated buffer
 - `verbose`: print status
 - `kwargs`: such as `tol=1e-7`, `iters=1000`
