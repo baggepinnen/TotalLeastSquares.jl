@@ -41,7 +41,7 @@ Solves the total least-squares problem Ax=y using the SVD method
 """
 function tls(A::AbstractArray,y::AbstractArray)
     AA  = [A y]
-    s   = svd(AA)
+    s   = svd(AA) # Not in-place for Zygote compatability
     n   = size(A,2)
     V21 = s.V[1:n,n+1:end]
     V22 = s.V[n+1:end,n+1:end]
@@ -50,11 +50,13 @@ end
 
 """
     tls!(Ay::AbstractArray, n::Integer)
+    tls!(s::SVD, n::Integer)
 
-Inplace version of `tls`. `Ay` is `[A y]` and `n` is the number of columns in `A`
+Inplace version of `tls`. `Ay` is `[A y]` and `n` is the number of columns in `A`. Also accepts a precomputed SVD of `Ay`.
 """
-function tls!(Ay::AbstractArray, n::Integer)
-    s   = svd!(Ay)
+tls!(Ay::AbstractArray, n::Integer)  = tls!(svd!(Ay), n)
+
+function tls!(s::SVD, n::Integer)
     V21 = s.V[1:n,n+1:end]
     V22 = s.V[n+1:end,n+1:end]
     x   = -V21/V22
@@ -143,8 +145,8 @@ Solves a robust total least-squares problem Ax=y using the robust PCA method of 
 """
 function rtls(A::AbstractArray,y::AbstractArray; kwargs...)
     AA  = [A y]
-    Ah,Eh = rpca(AA; nukeA=false, kwargs...)
-    tls!(Ah,size(A,2))
+    Ah,Eh,s = rpca(AA; nukeA=false, kwargs...)
+    tls!(s,size(A,2))
 end
 
 # function rtls_ga(A::AbstractArray,y::AbstractArray; μ = μ!, kwargs...)
