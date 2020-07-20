@@ -44,7 +44,7 @@ end
 
 The inverse of [`hankel`](@ref). Create a 1-D signal by antidiagonal averaging
 
-#Arguments:
+# Arguments:
 - `A`: A Hankel matrix
 - `lag`: if lag was used to create `A`, you must provide it to `unhankel`
 - `N`: length of the original signal
@@ -111,7 +111,7 @@ end
 
 Filter time series `y` by forming a lag-embedding T (a Toeplitz matrix) and using [`rpca`](@ref) to recover a low-rank matrix from which the a filtered signal `yf` can be extracted. The size of the embedding `n` determines the complexity, higher `n` generally gives better filtering at the cost of roughly cubic complexity.
 
-#Arguments:
+# Arguments:
 - `y`: A signal to be filtered, assumed corrupted with sparse noise
 - `n`: Embedding size
 - `kwargs`: See [`rpca`](@ref) for keyword arguments.
@@ -138,7 +138,7 @@ minimize_{A,E} ||A||_* + λ||E||₁ s.t. D = A+E
 Ref: "The Augmented Lagrange Multiplier Method for Exact Recovery of Corrupted Low-Rank Matrices", Zhouchen Lin, Minming Chen, Leqin Wu, Yi Ma, https://people.eecs.berkeley.edu/~yima/psfile/Lin09-MP.pdf
 Significant inspiration taken from an early implementation by Ryuichi Yamamoto in RobustPCA.jl
 
-#Arguments:
+# Arguments:
 - `D`: Design matrix
 - `λ`: Sparsity regularization
 - `maxrank`: Upper limit on the rank of the estimated matrix. Setting a smaller value makes convergence faster.
@@ -244,7 +244,7 @@ end
 "Grassmann Averages for Scalable Robust PCA", Hauberg et al.
 http://www2.compute.dtu.dk/~sohau/papers/cvpr2014a/Hauberg_CVPR_2014.pdf
 
-#Arguments:
+# Arguments:
 - `X`: Data matrix
 - `r`: Rank (number of components to estimate)
 - `U`: Optional pre-allocated buffer
