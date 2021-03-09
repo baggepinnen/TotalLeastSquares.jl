@@ -475,4 +475,29 @@ end
     end
     @test mean(results) >= 0.98
 end
+
+@testset "flts" begin
+    @info "Testing flts"
+    # Example from paper 
+    x = 10randn(1000)
+    a, b = 1, 2
+    y = a*x .+ b 
+    y[801:end] = 5randn(200) 
+    x[801:end] = 5randn(200) .+ 50 
+    xb = [x ones(1000)]
+    # default
+    res = flts(xb,y, verbose = true)
+    @test a ≈ res[1]
+    @test b ≈ res[2]
+    # define % of outlier
+    res1 = flts(xb,y, N = 10, outlier = 0.20, verbose = true)
+    @test a ≈ res1[1]
+    @test b ≈ res1[2]
+    # define length of set H and check the subset
+    (H, res2, Q) = flts(xb,y, N = 10, h = 800, return_set = true, verbose = true)
+    @test a ≈ res2[1]
+    @test b ≈ res2[2]
+    @test all(H .< 801)
+    @test Q + 1 ≈ 1
+end
 end
