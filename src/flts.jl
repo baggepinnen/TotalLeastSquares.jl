@@ -20,7 +20,7 @@ The basic idea is to find an outlier-free subset `H` of regressors that minimize
 * verbose::Bool: Print some more information
 
 # Return
-The parameters θ that minimizes Q and optionally a tuple (H, θ, Q), which also contains the selected subset H and the minimal Q
+The parameters θ that minimize Q and optionally a tuple (H, θ, Q), which also contains the selected subset H and the minimal Q
 
 # Example
 Taken from the original paper
