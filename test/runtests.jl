@@ -489,8 +489,8 @@ end
     res = flts(xb,y, verbose = true)
     @test a ≈ res[1]
     @test b ≈ res[2]
-    # define % of outlier
-    res1 = flts(xb,y, N = 10, outlier = 0.20, verbose = true)
+    # define % of outliers
+    res1 = flts(xb,y, N = 10, outliers = 0.20, verbose = true)
     @test a ≈ res1[1]
     @test b ≈ res1[2]
     # define length of set H and check the subset
