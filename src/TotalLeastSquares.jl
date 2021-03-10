@@ -1,7 +1,9 @@
 module TotalLeastSquares
-export tls, tls!, wtls, wls, rtls, irls, sls, rowcovariance, hankel, ishankel, unhankel
+export tls, tls!, wtls, wls, rtls, irls, sls, rowcovariance, hankel, ishankel, unhankel, flts
 export rpca, lowrankfilter, rpca_ga, entrywise_median, entrywise_trimmed_mean, μ!
-using FillArrays, Printf, LinearAlgebra, SparseArrays, Statistics
+using FillArrays, Printf, LinearAlgebra, SparseArrays, Statistics, StatsBase
+
+include("flts.jl")
 
 """
     wls(A,y,Σ)
