@@ -42,7 +42,7 @@ end
 """
     unhankel(A, lag, N, D=1)
 
-The inverse of [`hankel`](@ref). Create a 1-D signal by antidiagonal averaging
+The inverse of [`hankel`](@ref). Create a signal of the original dimension by antidiagonal averaging
 
 # Arguments:
 - `A`: A Hankel matrix
