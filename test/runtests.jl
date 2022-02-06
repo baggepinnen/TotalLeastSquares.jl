@@ -53,15 +53,16 @@ Random.seed!(0)
         @info "Testing WLS"
         x   = randn(3)
         A   = randn(50,3)
+        A   = A*Diagonal([1e6, 1, 1e-6]) # Give A poor codition number
         An  = A + randn(size(A))
         y   = A*x
         Qyy = randn(50, 50)
-        Qyy = Qyy'Qyy
-        yn  = y + cholesky(Qyy).L*randn(50)
+        Qyy = cholesky(Qyy'Qyy)
+        yn  = y + Qyy.L*randn(50)
     
         function we(x)
             e = An*x - y
-            dot(e, inv(Qyy), e)
+            dot(e, Qyy\e)
         end
     
         x̂ls = An\yn
@@ -70,7 +71,38 @@ Random.seed!(0)
         @test we(x̂ls) > we(x̂wls)
 
         # Test approx equality to naive solution
-        @test x̂wls ≈ (An'*(Qyy\An))\(An'*(Qyy\yn))
+        xnaive = (An'*(Qyy\An))\(An'*(Qyy\yn))
+        @test x̂wls ≈ xnaive atol=1e-3
+
+        # Compute high-precision solution
+        xhp = let An = big.(An), yn = big.(yn)
+            (An'*(Qyy\An))\(An'*(Qyy\yn))
+        end
+
+        @test norm(x̂wls-xhp) < norm(xnaive-xhp)
+
+        
+        res = map(1:100) do _
+            x   = randn(4)
+            A   = randn(50,3)
+            A   = [A A[:,1].+1e-5randn(50)] # Give A poor codition number
+            y   = A*x
+            Qyy = randn(50, 50)
+            Qyy = cholesky(Qyy'Qyy)
+            x̂wls = wls(A,y,Qyy)
+            xnaive = Symmetric(A'*(Qyy\A))\(A'*(Qyy\y))
+    
+            # Compute high-precision solution
+            xhp = let A = big.(A), y = big.(y)
+                (A'*(Qyy\A))\(A'*(Qyy\y))
+            end
+    
+            norm(x̂wls-xhp) < norm(xnaive-xhp)
+        end
+
+        @test sum(res)/length(res) > 0.5
+
+
     end
     
 

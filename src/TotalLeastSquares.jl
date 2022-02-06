@@ -17,7 +17,7 @@ Solves the weigted standard least-squares problem Ax = y + e, e ~ N(0,Σ)
 - `C` A Cholesky factor of the weight may be provided instead of `Σ`
 """
 function wls(A, y, C::Cholesky)
-    R = qr(C.L\A).R
+    R = UpperTriangular(qr(C.L\A).R)
     R\(R'\(A'*(C\y)))
 end
 
