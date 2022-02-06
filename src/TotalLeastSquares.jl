@@ -33,7 +33,7 @@ function wls!(zA,A,y,w)
     Symmetric(A'*zA)\(A'w)
 end
 
-wls(A,y,Σ::Union{Matrix, SparseMatrixCSC}) = wls(A,y,cholesky(Hermitian(Σ)))
+wls(A,y,Σ::Union{AbstractMatrix, SparseMatrixCSC}) = wls(A,y,cholesky(Hermitian(Σ)))
 
 """
     tls(A,y)
