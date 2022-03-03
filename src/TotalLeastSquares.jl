@@ -14,7 +14,7 @@ Solves the weigted standard least-squares problem Ax = y + e, e ~ N(0,Σ)
 - `y ∈ R(n)` RHS
 - `Σ ∈ R(n,n)` Covariance matrix of the residuals (can be sparse or already factorized).
 """
-function wls(A,y,Σ)
+function wls(A,y,Σ::Union{<:Factorization, <: Diagonal})
     Symmetric(A'*(Σ\A))\(A'*(Σ\y))
 end
 
@@ -31,7 +31,7 @@ function wls!(zA,A,y,w)
     Symmetric(A'*zA)\(A'w)
 end
 
-wls(A,y,Σ::Union{Matrix, SparseMatrixCSC}) = wls(A,y,factorize(Hermitian(Σ)))
+wls(A,y,Σ::Union{AbstractMatrix, SparseMatrixCSC}) = wls(A,y,factorize(Hermitian(Σ)))
 
 """
     tls(A,y)
@@ -113,7 +113,7 @@ Takes row-wise covariance matrices `QAy[i]` and returns the full (sparse) covari
 function rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})
     n = length(rowQ)
     u = size(rowQ[1],1)-1
-    Qaa,Qay,Qyy = spzeros(n*u,n*u), spzeros(n*u,n), Diagonal(spzeros(n,n))
+    Qaa,Qay,Qyy = spzeros(n*u,n*u), spzeros(n*u,n), Diagonal(zeros(n))
     for (i,Q) = enumerate(rowQ)
         for col = 1:u
             for row = 1:u
