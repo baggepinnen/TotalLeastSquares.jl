@@ -6,18 +6,20 @@ using FillArrays, Printf, LinearAlgebra, SparseArrays, Statistics, StatsBase
 include("flts.jl")
 
 """
-    wls(A,y,Σ)
+    wls(A, y, Σ)
+    wls(A, y, C::Cholesky)
 
 Solves the weigted standard least-squares problem Ax = y + e, e ~ N(0,Σ)
 # Arguments
 - `A ∈ R(n,u)` Design matrix
 - `y ∈ R(n)` RHS
 - `Σ ∈ R(n,n)` Covariance matrix of the residuals (can be sparse or already factorized).
+- `C` A Cholesky factor of the weight may be provided instead of `Σ`
 """
-function wls(A,y,Σ::Union{<:Factorization, <: Diagonal})
-    Symmetric(A'*(Σ\A))\(A'*(Σ\y))
+function wls(A, y, C::Cholesky)
+    R = UpperTriangular(qr(C.L\A).R)
+    R\(R'\(A'*(C\y)))
 end
-
 
 """
     wls!(zA, A, y, w::Vector)
@@ -31,7 +33,7 @@ function wls!(zA,A,y,w)
     Symmetric(A'*zA)\(A'w)
 end
 
-wls(A,y,Σ::Union{AbstractMatrix, SparseMatrixCSC}) = wls(A,y,factorize(Hermitian(Σ)))
+wls(A,y,Σ::Union{AbstractMatrix, SparseMatrixCSC}) = wls(A,y,cholesky(Hermitian(Σ)))
 
 """
     tls(A,y)

@@ -26,6 +26,11 @@ Random.seed!(0)
         @printf "Weigthed Least squares error: %16.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
         @test norm(x-x̂) < 1
 
+
+        x̂ = wls(An,yn,cholesky(Matrix(Qyy)).U)
+        @printf "Chol-weight Least squares error: %13.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
+        @test norm(x-x̂) < 1
+
         x̂ = tls(An,yn)
         @printf "Total Least squares error: %19.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
         @test norm(x-x̂) < 1
@@ -43,6 +48,63 @@ Random.seed!(0)
         @test rowC[3] ≈ Qyy
 
     end
+
+    @testset "WLS" begin
+        @info "Testing WLS"
+        x   = randn(3)
+        A   = randn(50,3)
+        A   = A*Diagonal([1e6, 1, 1e-6]) # Give A poor codition number
+        An  = A + randn(size(A))
+        y   = A*x
+        Qyy = randn(50, 50)
+        Qyy = cholesky(Qyy'Qyy)
+        yn  = y + Qyy.L*randn(50)
+    
+        function we(x)
+            e = An*x - y
+            dot(e, Qyy\e)
+        end
+    
+        x̂ls = An\yn
+        x̂wls = wls(An,yn,Qyy)
+    
+        @test we(x̂ls) > we(x̂wls)
+
+        # Test approx equality to naive solution
+        xnaive = (An'*(Qyy\An))\(An'*(Qyy\yn))
+        @test x̂wls ≈ xnaive atol=1e-3
+
+        # Compute high-precision solution
+        xhp = let An = big.(An), yn = big.(yn)
+            (An'*(Qyy\An))\(An'*(Qyy\yn))
+        end
+
+        @test norm(x̂wls-xhp) < norm(xnaive-xhp)
+
+        
+        res = map(1:100) do _
+            x   = randn(4)
+            A   = randn(50,3)
+            A   = [A A[:,1].+1e-5randn(50)] # Give A poor codition number
+            y   = A*x
+            Qyy = randn(50, 50)
+            Qyy = cholesky(Qyy'Qyy)
+            x̂wls = wls(A,y,Qyy)
+            xnaive = Symmetric(A'*(Qyy\A))\(A'*(Qyy\y))
+    
+            # Compute high-precision solution
+            xhp = let A = big.(A), y = big.(y)
+                (A'*(Qyy\A))\(A'*(Qyy\y))
+            end
+    
+            norm(x̂wls-xhp) < norm(xnaive-xhp)
+        end
+
+        @test sum(res)/length(res) > 0.5
+
+
+    end
+    
 
 
     @testset "Robust PCA" begin

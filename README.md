@@ -16,7 +16,7 @@ These functions are exported:
   The Q-matrices are the covariance matrices of the noise terms in `vec(A)` and `y` respectively.
 - `Qaa,Qay,Qyy = rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})`
   Takes row-wise covariance matrices `QAy[i]` and returns the full (sparse) covariance matrices. `rowQ = [cov([A[i,:] y[i]]) for i = 1:length(y)]`
-- `x = wls(A,y,Qyy)` Solves the weighted standard LS problem. `Qyy` is the covariance matrix of the residuals with side length equal to the length of `y`.
+- `x = wls(A,y,Qyy)` Solves the weighted standard LS problem. `Qyy` is the covariance matrix of the residuals with side length equal to the length of `y`. A method accepting a `Cholesky` factor of the weight is also available.
 - `x = rtls(A,y)` Solves a robust TLS problem. Both `A` and `y` are assumed to be corrupted with high magnitude, but sparse, noise. See analysis below.
 - `x = irls(A,y; tolx=0.001, tol=1.0e-6, verbose=false, iters=100)` minimizeₓ ||Ax-y||₁ using iteratively reweighted least squares.
 - `x = sls(A,y; r = 1, iters = 100, verbose = false, tol = 1.0e-8)` Simplex least-squares: minimizeₓ ||Ax-y||₂ s.t. sum(x) = r
