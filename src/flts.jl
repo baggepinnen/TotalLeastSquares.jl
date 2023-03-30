@@ -91,8 +91,7 @@ end
 # Helper function that applies a certain number of C-steps to a subset H and checks for convergence
 function optimize_H(A, y, h::Int, initial, maxiter::Int, ΔQmin)
     Q_old = initial[3]
-    # Create object in outer scope
-    opt = nothing
+    local opt
     # Apply C-steps until convergence / maxiter
     for i in 1:maxiter
         opt = C_step(A, y, initial[2], h)
@@ -127,7 +126,8 @@ end
 # The C-step, workinghorse that guarentees converging parameters
 function C_step(A, y, θ_old, h)
     # Use the old parameters to get the residuals
-    residuals = y .- A * θ_old
+    residuals = copy(y)
+    mul!(residuals, A, θ_old, 1, -1)
     # Sort the residuals and return a new subset with the smallest residuals
     # H_new = sortperm(abs.(residuals))[1:h] # should be more efficient, but apperantly is not
     H_new = sortperm(abs.(residuals))[1:h]
@@ -139,6 +139,9 @@ end
 
 # get the objective function Q
 function get_Q(A, y, H, θ)
-    residuals = y .- A * θ
-    return sum(abs2, residuals[H])
+    # residuals = y .- A * θ
+    residuals = copy(y)
+    mul!(residuals, A, θ, 1, -1)
+
+    return @views sum(abs2, residuals[H])
 end
