@@ -115,7 +115,7 @@ Takes row-wise covariance matrices `QAy[i]` and returns the full (sparse) covari
 function rowcovariance(rowQ::AbstractVector{<:AbstractMatrix})
     n = length(rowQ)
     u = size(rowQ[1],1)-1
-    Qaa,Qay,Qyy = spzeros(n*u,n*u), spzeros(n*u,n), Diagonal(spzeros(n,n))
+    Qaa,Qay,Qyy = spzeros(n*u,n*u), spzeros(n*u,n), Diagonal(zeros(n))
     for (i,Q) = enumerate(rowQ)
         for col = 1:u
             for row = 1:u
