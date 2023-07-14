@@ -1,7 +1,7 @@
 name = "TotalLeastSquares"
 uuid = "028f657a-7ace-5159-a694-8cfd97933b0c"
 authors = ["baggepinnen <baggepinnen@gmail.com>"]
-version = "1.7.6"
+version = "1.7.7"
 
 [deps]
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
@@ -13,7 +13,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 FillArrays = "1"
-StatsBase = "0.33"
+StatsBase = "0.33, 0.34"
 julia = "1.0"
 
 [extras]
