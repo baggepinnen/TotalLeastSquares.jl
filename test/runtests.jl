@@ -1,4 +1,4 @@
-using Random, Statistics, LinearAlgebra, Test, FillArrays, Printf, TotalLeastSquares, StatsBase
+using Random, Statistics, LinearAlgebra, SparseArrays, Test, FillArrays, Printf, TotalLeastSquares, StatsBase
 using RandomizedLinAlg
 Random.seed!(0)
 
@@ -26,6 +26,11 @@ Random.seed!(0)
         @printf "Weigthed Least squares error: %16.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
         @test norm(x-x̂) < 1
 
+
+        x̂ = wls(An,yn,cholesky(Matrix(Qyy)))
+        @printf "Chol-weight Least squares error: %13.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
+        @test norm(x-x̂) < 1
+
         x̂ = tls(An,yn)
         @printf "Total Least squares error: %19.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
         @test norm(x-x̂) < 1
@@ -42,6 +47,94 @@ Random.seed!(0)
         @test rowC[2] ≈ Qay
         @test rowC[3] ≈ Qyy
 
+    end
+
+    @testset "WLS" begin
+        @info "Testing WLS"
+        x   = randn(3)
+        A   = randn(50,3)
+        A   = A*Diagonal([1e6, 1, 1e-6]) # Give A poor codition number
+        An  = A + randn(size(A))
+        y   = A*x
+        Qyy = randn(50, 50)
+        Qyy = cholesky(Qyy'Qyy)
+        yn  = y + Qyy.L*randn(50)
+    
+        function we(x)
+            e = An*x - y
+            dot(e, Qyy\e)
+        end
+    
+        x̂ls = An\yn
+        x̂wls = wls(An,yn,Qyy)
+    
+        @test we(x̂ls) > we(x̂wls)
+
+        # Test approx equality to naive solution
+        xnaive = (An'*(Qyy\An))\(An'*(Qyy\yn))
+        @test x̂wls ≈ xnaive atol=1e-3
+
+        # Compute high-precision solution
+        xhp = let An = big.(An), yn = big.(yn)
+            (An'*(Qyy\An))\(An'*(Qyy\yn))
+        end
+
+        @test norm(x̂wls-xhp) < norm(xnaive-xhp)
+
+
+        res = map(1:100) do _
+            x   = randn(4)
+            A   = randn(50,3)
+            A   = [A A[:,1].+1e-5randn(50)] # Give A poor codition number
+            y   = A*x
+            Qyy = randn(50, 50)
+            Qyy = cholesky(Qyy'Qyy)
+            x̂wls = wls(A,y,Qyy)
+            xnaive = Symmetric(A'*(Qyy\A))\(A'*(Qyy\y))
+    
+            # Compute high-precision solution
+            xhp = let A = big.(A), y = big.(y)
+                (A'*(Qyy\A))\(A'*(Qyy\y))
+            end
+    
+            norm(x̂wls-xhp) < norm(xnaive-xhp)
+        end
+
+        @test sum(res)/length(res) > 0.5
+
+        # Different input types for Σ should all give the same solution
+        x    = randn(3)
+        A    = randn(40, 3)
+        M    = randn(40, 40)
+        Σ    = Symmetric(M'M + I)       # dense SPD covariance
+        y    = A*x + cholesky(Σ).L*randn(40)
+        ref  = (A'*(Σ\A))\(A'*(Σ\y))
+
+        @test wls(A, y, Matrix(Σ))           ≈ ref  # dense matrix path
+        @test wls(A, y, cholesky(Matrix(Σ))) ≈ ref  # precomputed Cholesky object
+        @test wls(A, y, sparse(Σ))           ≈ ref  # sparse path (CHOLMOD factor)
+        @test wls(A, y, Diagonal(diag(Σ)))   ≈ (A'*(Diagonal(diag(Σ))\A))\(A'*(Diagonal(diag(Σ))\y)) # Diagonal path
+
+    end
+
+    @testset "wtls sparse covariance" begin
+        @info "Testing wtls with sparse covariance"
+        x   = randn(3)
+        A   = randn(50,3)
+        σa  = 1
+        σy  = 0.01
+        An  = A + σa*randn(size(A))
+        y   = A*x
+        yn  = y + σy*randn(size(y))
+        Qaa = σa^2*Eye(prod(size(A)))
+        Qay = 0Eye(prod(size(A)),length(y))
+        Qyy = σy^2*Eye(prod(size(y)))
+
+        x̂dense  = wtls(An, yn, Qaa, Qay, Qyy, iters=10)
+        # Sparse covariances exercise the wls Factorization fallback during initialization
+        x̂sparse = wtls(An, yn, sparse(Qaa), sparse(Qay), sparse(Qyy), iters=10)
+        @test norm(x - x̂sparse) < 1
+        @test x̂sparse ≈ x̂dense rtol=1e-6
     end
 
 
