@@ -116,7 +116,26 @@ Random.seed!(0)
         @test wls(A, y, Diagonal(diag(Σ)))   ≈ (A'*(Diagonal(diag(Σ))\A))\(A'*(Diagonal(diag(Σ))\y)) # Diagonal path
 
     end
-    
+
+    @testset "wtls sparse covariance" begin
+        @info "Testing wtls with sparse covariance"
+        x   = randn(3)
+        A   = randn(50,3)
+        σa  = 1
+        σy  = 0.01
+        An  = A + σa*randn(size(A))
+        y   = A*x
+        yn  = y + σy*randn(size(y))
+        Qaa = σa^2*Eye(prod(size(A)))
+        Qay = 0Eye(prod(size(A)),length(y))
+        Qyy = σy^2*Eye(prod(size(y)))
+
+        x̂dense  = wtls(An, yn, Qaa, Qay, Qyy, iters=10)
+        # Sparse covariances exercise the wls Factorization fallback during initialization
+        x̂sparse = wtls(An, yn, sparse(Qaa), sparse(Qay), sparse(Qyy), iters=10)
+        @test norm(x - x̂sparse) < 1
+        @test x̂sparse ≈ x̂dense rtol=1e-6
+    end
 
 
     @testset "Robust PCA" begin
