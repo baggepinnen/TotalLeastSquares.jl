@@ -1,4 +1,4 @@
-using Random, Statistics, LinearAlgebra, Test, FillArrays, Printf, TotalLeastSquares, StatsBase
+using Random, Statistics, LinearAlgebra, SparseArrays, Test, FillArrays, Printf, TotalLeastSquares, StatsBase
 using RandomizedLinAlg
 Random.seed!(0)
 
@@ -27,7 +27,7 @@ Random.seed!(0)
         @test norm(x-x̂) < 1
 
 
-        x̂ = wls(An,yn,cholesky(Matrix(Qyy)).U)
+        x̂ = wls(An,yn,cholesky(Matrix(Qyy)))
         @printf "Chol-weight Least squares error: %13.3e %10.3e %10.3e, Norm: %10.3e\n" (x-x̂)... norm(x-x̂)
         @test norm(x-x̂) < 1
 
@@ -79,7 +79,7 @@ Random.seed!(0)
             (An'*(Qyy\An))\(An'*(Qyy\yn))
         end
 
-        @test norm(x̂wls-xhp) <= 10*norm(xnaive-xhp) # Both methods are at the floating-point noise floor here; assert comparable accuracy rather than strict ordering (the statistical test below captures the accuracy claim robustly)
+        @test norm(x̂wls-xhp) < norm(xnaive-xhp)
 
 
         res = map(1:100) do _
@@ -102,6 +102,18 @@ Random.seed!(0)
 
         @test sum(res)/length(res) > 0.5
 
+        # Different input types for Σ should all give the same solution
+        x    = randn(3)
+        A    = randn(40, 3)
+        M    = randn(40, 40)
+        Σ    = Symmetric(M'M + I)       # dense SPD covariance
+        y    = A*x + cholesky(Σ).L*randn(40)
+        ref  = (A'*(Σ\A))\(A'*(Σ\y))
+
+        @test wls(A, y, Matrix(Σ))           ≈ ref  # dense matrix path
+        @test wls(A, y, cholesky(Matrix(Σ))) ≈ ref  # precomputed Cholesky object
+        @test wls(A, y, sparse(Σ))           ≈ ref  # sparse path (CHOLMOD factor)
+        @test wls(A, y, Diagonal(diag(Σ)))   ≈ (A'*(Diagonal(diag(Σ))\A))\(A'*(Diagonal(diag(Σ))\y)) # Diagonal path
 
     end
     

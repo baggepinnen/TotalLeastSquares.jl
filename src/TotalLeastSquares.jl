@@ -14,11 +14,10 @@ Solves the weigted standard least-squares problem Ax = y + e, e ~ N(0,Σ)
 - `A ∈ R(n,u)` Design matrix
 - `y ∈ R(n)` RHS
 - `Σ ∈ R(n,n)` Covariance matrix of the residuals (can be sparse or already factorized).
-- `C` A Cholesky factor of the weight may be provided instead of `Σ`
+- `C` A `Cholesky` factorization of `Σ` may be provided instead of `Σ`
 """
 function wls(A, y, C::Cholesky)
-    R = UpperTriangular(qr(C.L\A).R)
-    R\(R'\(A'*(C\y)))
+    qr(C.L\A) \ (C.L\y)
 end
 
 """
@@ -33,7 +32,10 @@ function wls!(zA,A,y,w)
     Symmetric(A'*zA)\(A'w)
 end
 
-wls(A,y,Σ::Union{AbstractMatrix, SparseMatrixCSC}) = wls(A,y,cholesky(Hermitian(Σ)))
+# Covariance already factorized (e.g. a sparse CHOLMOD factor): weighted normal equations
+wls(A,y,Σ::Factorization) = Symmetric(A'*(Σ\A))\(A'*(Σ\y))
+
+wls(A,y,Σ::AbstractMatrix) = wls(A,y,cholesky(Hermitian(Σ)))
 
 """
     tls(A,y)
